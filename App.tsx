@@ -80,12 +80,12 @@ const App: React.FC = () => {
     <div className="min-h-screen flex flex-col bg-slate-50 text-slate-900 font-sans">
       <Header onReset={handleReset} />
       
-      <main className="flex-grow">
+      <main className="flex-grow flex flex-col">
         {/* Hero Section */}
         <div className={`
           relative w-full border-b border-slate-200 overflow-hidden flex flex-col items-center justify-center 
           transition-all duration-700 ease-in-out transform-gpu will-change-[min-height]
-          ${hasResults ? 'min-h-[140px] pt-24 pb-6 bg-slate-50' : 'min-h-[600px]'}
+          ${hasResults ? 'min-h-[140px] pt-24 pb-6 bg-slate-50 flex-none' : 'min-h-[600px] flex-grow'}
         `}>
             {/* Background Image - Fades out in Results Mode */}
             <div 
@@ -188,12 +188,12 @@ const App: React.FC = () => {
             </div>
         )}
       </main>
-
-      <footer className="bg-[#f5f5f7] border-t border-slate-200 py-4 font-sans">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 flex flex-col items-center text-center">
+        {/* py-7 控制的是下层component的宽度，越大越宽*/} 
+      <footer className="bg-[#f5f5f7] border-t border-slate-200 py-7 font-sans">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 flex flex-col items-center text-center gap-3">
           
           {/* Top tagline - Matches 'IoTLab' style (Blue) - Changed to text-sm */}
-          <div className="text-sm text-polimi-900 font-bold tracking-wide mb-2">
+          <div className="text-sm text-polimi-900 font-bold tracking-wide">
             Unlock IoT Intelligence <span className="mx-1.5 text-slate-400 font-normal">·</span> Reveal the Invisible <span className="mx-1.5 text-slate-400 font-normal">·</span> See Data Differently
           </div>
 

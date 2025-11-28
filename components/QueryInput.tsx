@@ -98,13 +98,24 @@ export const QueryInput: React.FC<QueryInputProps> = ({
 }) => {
   const [value, setValue] = useState('');
   const [randomSuggestions, setRandomSuggestions] = useState<Suggestion[]>([]);
+  const [isSpinning, setIsSpinning] = useState(false);
+
+  // Extract shuffle logic so it can be called manually
+  const refreshSuggestions = () => {
+    setIsSpinning(true);
+    // Shuffle and pick 2
+    const shuffled = [...SUGGESTIONS].sort(() => 0.5 - Math.random());
+    setRandomSuggestions(shuffled.slice(0, 2));
+    
+    // Reset animation state after duration
+    setTimeout(() => setIsSpinning(false), 500);
+  };
 
   useEffect(() => {
     // Only refresh suggestions when we are in (or returning to) the "home" state
     // i.e., when suggestions are visible (hideSuggestions is false).
     if (!hideSuggestions) {
-      const shuffled = [...SUGGESTIONS].sort(() => 0.5 - Math.random());
-      setRandomSuggestions(shuffled.slice(0, 2));
+      refreshSuggestions();
     }
   }, [hideSuggestions]);
 
@@ -174,13 +185,23 @@ export const QueryInput: React.FC<QueryInputProps> = ({
       {/* Suggestions - Conditionally Rendered */}
       {!hideSuggestions && (
         <div className="mt-4 flex flex-wrap justify-center sm:justify-start gap-2 text-sm pl-4 transition-all duration-500">
-          <span className="text-slate-500 flex items-center gap-1 font-medium"><Sparkles className="w-3 h-3"/> Try asking:</span>
+          <button 
+            type="button"
+            onClick={refreshSuggestions}
+            className="text-slate-500 flex items-center gap-1.5 font-medium hover:text-polimi-600 transition-colors cursor-pointer group select-none focus:outline-none"
+            title="Click to get fresh suggestions"
+          >
+            <Sparkles className={`w-3.5 h-3.5 transition-transform duration-500 ${isSpinning ? 'rotate-180' : 'group-hover:rotate-12'}`} /> 
+            <span>Try asking:</span>
+          </button>
+          
           {randomSuggestions.map((item, idx) => (
              <button 
                key={idx}
                onClick={() => setValue(item.question)} 
-               className="px-3 py-1 bg-white/50 backdrop-blur-sm border border-slate-200 rounded-full text-slate-700 hover:border-polimi-500 hover:text-polimi-700 transition-colors text-left max-w-full truncate"
+               className="px-3 py-1 bg-white/50 backdrop-blur-sm border border-slate-200 rounded-full text-slate-700 hover:border-polimi-500 hover:text-polimi-700 transition-colors text-left max-w-full truncate animate-fade-in"
                title={item.question}
+               style={{ animationDelay: `${idx * 100}ms` }}
              >
                {item.label}
              </button>
