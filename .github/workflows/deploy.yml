@@ -2,8 +2,8 @@ name: Deploy Vite app to GitHub Pages
 
 on:
   push:
-    branches: [ main ]   # 主分支叫 main，就不用改
-  workflow_dispatch:      # 允许手动触发
+    branches: [ main ]      # 推到 main 自动部署
+  workflow_dispatch:         # 也可以在 Actions 里手动点 Run workflow
 
 permissions:
   contents: read
@@ -17,6 +17,7 @@ concurrency:
 jobs:
   build:
     runs-on: ubuntu-latest
+
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -28,15 +29,15 @@ jobs:
           cache: 'npm'
 
       - name: Install dependencies
-        run: npm ci
+        run: npm install          # 用 npm install，避免 package-lock 问题
 
       - name: Build
-        run: npm run build      # Vite 默认已经有这个脚本
+        run: npm run build        # 要保证 package.json 里有 "build": "vite build"
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: dist           # Vite 打包输出目录
+          path: dist              # Vite 默认输出 dist，如果改过输出目录，这里要同步改
 
   deploy:
     needs: build
