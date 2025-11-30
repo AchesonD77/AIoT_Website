@@ -15,6 +15,9 @@ const App: React.FC = () => {
     data: null
   });
   
+  // Lifted state for the search input so we can clear it from outside (Header)
+  const [searchQuery, setSearchQuery] = useState('');
+  
   // State to track if we are currently animating the close/reset action
   const [isClosing, setIsClosing] = useState(false);
 
@@ -55,14 +58,18 @@ const App: React.FC = () => {
   };
 
   const handleReset = () => {
+    // Clear the search input
+    setSearchQuery('');
+
     // 1. Start closing animation (triggers Hero expansion immediately)
     setIsClosing(true);
     
-    // 2. Smooth scroll to top. 
-    // Since the Hero is expanding simultaneously, this creates a "zoom out" feel.
+    // 2. Instant scroll to top. 
+    // Changing from 'smooth' to 'auto' (instant) prevents layout thrashing stutter
+    // that occurs when smooth scrolling competes with the Hero section's height expansion animation.
     window.scrollTo({
       top: 0,
-      behavior: 'smooth'
+      behavior: 'auto'
     });
 
     // 3. Wait for the CSS transitions (700ms) + buffer to finish before unmounting data.
@@ -80,11 +87,12 @@ const App: React.FC = () => {
     <div className="min-h-screen flex flex-col bg-slate-50 text-slate-900 font-sans">
       <Header onReset={handleReset} />
       
-      <main className="flex-grow flex flex-col">
+      {/* Added 'relative' to allow absolute positioning of the Results section during exit */}
+      <main className="flex-grow flex flex-col relative">
         {/* Hero Section */}
         <div className={`
           relative w-full border-b border-slate-200 overflow-hidden flex flex-col items-center justify-center 
-          transition-all duration-700 ease-in-out transform-gpu will-change-[min-height]
+          transition-all duration-700 ease-in-out transform-gpu will-change-[min-height,padding]
           ${hasResults ? 'min-h-[140px] pt-24 pb-6 bg-slate-50 flex-none' : 'min-h-[600px] flex-grow'}
         `}>
             {/* Background Image - Fades out in Results Mode */}
@@ -138,6 +146,8 @@ const App: React.FC = () => {
                     {/* Search Input - Always visible, moves smoothly as grid above expands/collapses */}
                     <div className="w-full max-w-2xl transition-all duration-500 transform-gpu">
                         <QueryInput 
+                          value={searchQuery}
+                          onChange={setSearchQuery}
                           onSearch={handleSearch} 
                           isLoading={queryState.isLoading} 
                           hideSuggestions={hasResults} // Hide suggestions when in results mode
@@ -156,7 +166,10 @@ const App: React.FC = () => {
               ref={resultsRef}
               className={`max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-2 bg-slate-50/50 transition-all duration-500 ease-in-out transform-gpu ${
                 isClosing 
-                  ? 'opacity-0 translate-y-20 scale-[0.98] pointer-events-none'  // Smooth Exit: Slide down further, fade out
+                  // Fix for layout stutter: Position absolute during closing to remove from flow immediately.
+                  // This allows the Hero section (which is flex-grow) to calculate its final size correctly
+                  // without being affected by the disappearing Results sibling.
+                  ? 'absolute left-0 right-0 top-full opacity-0 translate-y-20 scale-[0.98] pointer-events-none'  
                   : 'opacity-100 translate-y-0 scale-100 animate-fade-in-up' // Enter/Active State
               }`}
             >

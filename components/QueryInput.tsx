@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { ArrowRight, Sparkles, X } from 'lucide-react';
 
 interface QueryInputProps {
+  value: string;
+  onChange: (value: string) => void;
   onSearch: (query: string) => void;
   isLoading: boolean;
   hideSuggestions?: boolean;
@@ -90,13 +92,14 @@ const SUGGESTIONS: Suggestion[] = [
 ];
 
 export const QueryInput: React.FC<QueryInputProps> = ({ 
+  value,
+  onChange,
   onSearch, 
   isLoading, 
   hideSuggestions = false,
   onReset,
   hasResults = false
 }) => {
-  const [value, setValue] = useState('');
   const [randomSuggestions, setRandomSuggestions] = useState<Suggestion[]>([]);
   const [isSpinning, setIsSpinning] = useState(false);
 
@@ -127,7 +130,7 @@ export const QueryInput: React.FC<QueryInputProps> = ({
   };
 
   const handleClear = () => {
-    setValue('');
+    onChange('');
     if (onReset) {
       onReset();
     }
@@ -145,7 +148,7 @@ export const QueryInput: React.FC<QueryInputProps> = ({
           <input
             type="text"
             value={value}
-            onChange={(e) => setValue(e.target.value)}
+            onChange={(e) => onChange(e.target.value)}
             placeholder="Just ask, unlock insights instantly"
             className="flex-grow bg-transparent text-white placeholder-slate-400 px-6 py-4 text-base sm:text-lg focus:outline-none"
             disabled={isLoading}
@@ -198,7 +201,7 @@ export const QueryInput: React.FC<QueryInputProps> = ({
           {randomSuggestions.map((item, idx) => (
              <button 
                key={idx}
-               onClick={() => setValue(item.question)} 
+               onClick={() => onChange(item.question)} 
                className="px-3 py-1 bg-white/50 backdrop-blur-sm border border-slate-200 rounded-full text-slate-700 hover:border-polimi-500 hover:text-polimi-700 transition-colors text-left max-w-full truncate animate-fade-in"
                title={item.question}
                style={{ animationDelay: `${idx * 100}ms` }}
