@@ -25,11 +25,10 @@ jobs:
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
-          node-version: 20
-          cache: 'npm'
+          node-version: 20        # 修改了
 
       - name: Install dependencies
-        run: npm install          # 用 npm install，避免 package-lock 问题
+        run: npm install          # 安装依赖
 
       - name: Build
         run: npm run build        # 要保证 package.json 里有 "build": "vite build"
@@ -37,7 +36,7 @@ jobs:
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: dist              # Vite 默认输出 dist，如果改过输出目录，这里要同步改
+          path: dist              # Vite 默认构建输出目录
 
   deploy:
     needs: build
