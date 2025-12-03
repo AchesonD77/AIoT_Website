@@ -6,8 +6,8 @@ export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, '.', '');
 
   return {
-    // 告诉 Vite 你的项目将部署在 /AIOT_Web/ 这个子路径下
-    base: '/AIOT_Web/',
+     // 👇 核心修改：开发环境用 /，生产环境用 /AIOT_Web/
+    base: mode === 'production' ? '/AIOT_Web/' : '/',
 
     server: {
       port: 3000,
