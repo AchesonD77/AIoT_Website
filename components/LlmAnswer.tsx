@@ -1,95 +1,289 @@
-import React from 'react';
-import { Bot, Lightbulb, Activity, Stethoscope } from 'lucide-react';
+import React, { useMemo } from 'react';
+import { Bot, Lightbulb, Activity, Stethoscope, FileText } from 'lucide-react';
+
+// --- 1. 图标定义 ---
+const AlertCardIcon = () => (
+    <svg className="w-5 h-5 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+    </svg>
+);
+
+// --- 2. 核心指标词汇库 ---
+const KNOWN_METRICS = [
+    "Temperature", "Temp", "Humidity", "RH",
+    "CO2", "CO₂", "PM2.5", "PM10", "IEQ", 
+    "Illuminance", "Occupancy", "Spikes", "Noise", "VOC", 
+    "Door events", "Notable hours", "Particles", "Ventilation"
+];
+
+// --- 3. 板块配置 ---
+const SECTIONS_CONFIG = [
+  { 
+    id: 'findings', 
+    title: 'Findings & Observations', 
+    icon: <Activity className="w-5 h-5 text-blue-600" />, 
+    regexKeywords: /findings|observations/i,
+    style: 'bullet'
+  },
+  { 
+    id: 'alarms', 
+    title: 'Alarms & Anomalies', 
+    icon: <AlertCardIcon />, 
+    regexKeywords: /alarms|anomalies|spike/i,
+    style: 'bullet'
+  },
+  { 
+    id: 'diagnostics', 
+    title: 'Diagnostics', 
+    icon: <Stethoscope className="w-5 h-5 text-purple-600" />, 
+    regexKeywords: /diagnostics|cause/i,
+    style: 'card'
+  },
+  { 
+    id: 'recommendations', 
+    title: 'Recommendations', 
+    icon: <Lightbulb className="w-5 h-5 text-amber-500" />, 
+    regexKeywords: /recommendations|actions/i,
+    style: 'numbered'
+  },
+];
 
 interface LlmAnswerProps {
   answer: string;
 }
 
 export const LlmAnswer: React.FC<LlmAnswerProps> = ({ answer }) => {
-  
-  // A simple way to structure the text if the backend sends markdown headers.
-  // In a production app, use 'react-markdown'. Here we do a custom render for specific sections.
-  
-  const sections = [
-    { id: 'findings', title: 'Findings & Observations', icon: <Activity className="w-5 h-5 text-blue-600" />, keywords: ['Findings', 'Observations'] },
-    { id: 'alarms', title: 'Alarms & Anomalies', icon: <AlertCardIcon />, keywords: ['Alarms', 'Anomalies', 'Spike'] },
-    { id: 'diagnostics', title: 'Diagnostics', icon: <Stethoscope className="w-5 h-5 text-purple-600" />, keywords: ['Diagnostics', 'Cause'] },
-    { id: 'recommendations', title: 'Recommendations', icon: <Lightbulb className="w-5 h-5 text-amber-500" />, keywords: ['Recommendations', 'Actions'] },
-  ];
 
-  // Very basic markdown stripping for demo purposes
-  const cleanText = (text: string) => text.replace(/###/g, '').replace(/\*\*/g, '').trim();
+  // --- 解析逻辑 ---
+  const parsedContent = useMemo(() => {
+    if (!answer) return {};
 
-  // Helper to find content between headers (Rough parsing for visual separation)
-  const getContentForSection = (keywords: string[]) => {
-    const lowerAnswer = answer.toLowerCase();
-    const indices = keywords.map(k => lowerAnswer.indexOf(k.toLowerCase())).filter(i => i !== -1);
-    if (indices.length === 0) return null;
+    const sectionPattern = /(?:^|\n)(?:#{1,6}|\*\*|\d+[\.\)]|-)?\s*(Findings|Observations|Alarms|Anomalies|Diagnostics|Cause|Recommendations|Actions)(?:.*?)[:\n]/gi;
+    const matches = Array.from(answer.matchAll(sectionPattern));
     
-    const startIndex = Math.min(...indices);
-    // Find next section start
-    let endIndex = answer.length;
-    // This is a naive parser logic for the specific demo format
-    // Real implementation would use a proper Markdown AST
-    const nextSections = ['### Findings', '### Alarms', '### Diagnostics', '### Recommendations']
-        .filter(s => !keywords.some(k => s.toLowerCase().includes(k.toLowerCase())));
-        
-    for (const next of nextSections) {
-        const idx = answer.indexOf(next, startIndex + 10); // offset to avoid self
-        if (idx !== -1 && idx < endIndex) endIndex = idx;
-    }
+    if (matches.length === 0) return { raw: answer };
 
-    let content = answer.substring(startIndex, endIndex);
-    // Remove the header line
-    content = content.substring(content.indexOf('\n') + 1).trim();
-    return content;
-  };
+    const result: Record<string, string> = {};
+    matches.forEach((match, index) => {
+      const keyword = match[1].toLowerCase();
+      const startIndex = match.index! + match[0].length;
+      const nextMatch = matches[index + 1];
+      const endIndex = nextMatch ? nextMatch.index : answer.length;
+      const content = answer.slice(startIndex, endIndex).trim();
+
+      const config = SECTIONS_CONFIG.find(s => s.regexKeywords.test(keyword));
+      if (config && content.length > 0) {
+        result[config.id] = result[config.id] ? result[config.id] + '\n' + content : content;
+      }
+    });
+    return result;
+  }, [answer]);
+
+  const isQuickAnswer = Object.keys(parsedContent).length === 0 || parsedContent.raw;
 
   return (
-    <div className="bg-white rounded-xl shadow-lg border border-polimi-100 overflow-hidden">
-      <div className="bg-gradient-to-r from-polimi-900 to-polimi-700 px-6 py-4 flex items-center gap-3 text-white">
+    <div className="bg-white rounded-xl shadow-lg border border-slate-100 overflow-hidden font-sans">
+      {/* Header */}
+      <div className="bg-blue-600 px-6 py-4 flex items-center gap-3 text-white">
         <Bot className="w-6 h-6" />
-        <h2 className="text-lg font-semibold tracking-wide">AI Analysis Report</h2>
+        <h2 className="text-lg font-bold tracking-wide">AI Analysis Report</h2>
       </div>
       
-      <div className="p-6 grid gap-6">
-        {sections.map((section) => {
-            const content = getContentForSection(section.keywords);
+      <div className="p-6 grid gap-8">
+        {!isQuickAnswer && SECTIONS_CONFIG.map((section) => {
+            const content = parsedContent[section.id];
             if (!content) return null;
 
             return (
-                <div key={section.id} className="relative pl-4 border-l-4 border-slate-100 hover:border-polimi-200 transition-colors">
-                    <div className="flex items-center gap-2 mb-2">
+                <div key={section.id} className="relative">
+                    <div className="flex items-center gap-2 mb-3">
                         {section.icon}
-                        <h3 className="font-bold text-slate-800">{section.title}</h3>
+                        <h3 className="font-bold text-slate-800 text-base">{section.title}</h3>
                     </div>
-                    <div className="text-slate-600 leading-7 text-sm whitespace-pre-line">
-                        {/* Highlighting bold parts manually for demo */}
-                        {content.split('**').map((part, i) => 
-                            i % 2 === 1 ? <span key={i} className="font-bold text-slate-900 bg-slate-100 px-1 rounded">{part}</span> : part
-                        )}
+                    <div className="pl-1">
+                        {formatText(content, section.style as any)}
                     </div>
                 </div>
             )
         })}
         
-        {/* Fallback if parsing fails, show raw */}
-        {!sections.some(s => getContentForSection(s.keywords)) && (
-            <div className="prose prose-sm max-w-none text-slate-700">
-                {answer}
+        {isQuickAnswer && (
+            <div className="relative">
+                <div className="flex items-center gap-2 mb-3">
+                    <FileText className="w-5 h-5 text-slate-500" />
+                    <h3 className="font-bold text-slate-800 text-base">Summary & Insights</h3>
+                </div>
+                <div className="pl-1">
+                    {formatText(parsedContent.raw || answer, 'bullet')}
+                </div>
             </div>
         )}
       </div>
       
-      <div className="bg-slate-50 px-6 py-3 border-t border-slate-100 text-xs text-slate-400 text-right">
-        Generated by IoT-LLM Agent (GPT-5 Preview)
+      <div className="bg-slate-50 px-6 py-3 border-t border-slate-100 text-xs text-slate-400 text-right flex justify-between items-center">
+         <span className="font-medium text-slate-400">Confidential Analysis</span>
+         <span>Generated by IoT-LLM Agent</span>
       </div>
     </div>
   );
 };
 
-const AlertCardIcon = () => (
-    <svg className="w-5 h-5 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-    </svg>
-)
+// --- 核心格式化引擎 ---
+
+const formatText = (text: string, style: 'bullet' | 'numbered' | 'card' = 'bullet') => {
+  if (!text) return null;
+  const lines = text.split('\n').filter(line => line.trim() !== '');
+  let listCounter = 0;
+
+  return lines.map((line, idx) => {
+    let cleanLine = line.trim();
+    
+    // 1. 移除列表符号
+    if (/^[*-]\s/.test(cleanLine) || /^\d+[\.\)]\s/.test(cleanLine)) {
+        cleanLine = cleanLine.replace(/^(?:[*-]|\d+[\.\)])\s+/, '');
+    }
+
+    // 2. 纯日期标题检测
+    const isDateHeader = /^\d{4}-\d{2}-\d{2}/.test(cleanLine) && cleanLine.length < 25;
+
+    // --- 智能处理 Key 和 Citation ---
+    let keyPart = null;
+    let contentPart = cleanLine;
+    let rightCitation = null; 
+
+    // A. 提取【行尾】引用 (Keep Right Logic)
+    // 提取 [2025-09-08] 这种在句子最后面的来源标记，把它放到右边
+    const trailingCitationRegex = /(\s*\[[\d- :]+\](?:-\[[\d- :]+\])?(?:,\s*\[[\d- :]+\])*\s*)$/;
+    const trailingMatch = cleanLine.match(trailingCitationRegex);
+    if (trailingMatch) {
+        rightCitation = trailingMatch[1].trim();
+        contentPart = cleanLine.substring(0, trailingMatch.index).trim();
+    }
+
+    // B. 提取【行首】Key (Timestamp or Text)
+    // 注意：这里我们恢复逻辑，不把时间戳移动到右边，而是提取为 keyPart 并在左侧渲染
+    const timestampKeyPattern = /^(\d{4}-\d{2}-\d{2}.*?\d{2}:\d{2}):/;
+    const timestampMatch = contentPart.match(timestampKeyPattern);
+
+    if (timestampMatch) {
+        // 时间戳 Key -> 设为 keyPart，将在渲染时变成灰色胶囊
+        keyPart = timestampMatch[1]; 
+        contentPart = contentPart.substring(timestampMatch[0].length).trim();
+    } else {
+        // 普通 Key -> 设为 keyPart，将在渲染时变成粗体
+        const generalKeyMatch = contentPart.match(/^([A-Za-z0-9 \(\)\.\-\/&,]+?):/);
+        if (generalKeyMatch && generalKeyMatch[1].length < 60) {
+            keyPart = generalKeyMatch[1];
+            contentPart = contentPart.substring(generalKeyMatch[0].length).trim();
+        }
+    }
+
+    // --- 渲染内容 ---
+    const formattedBody = processInlineStyles(contentPart);
+
+    const renderInnerContent = () => (
+        <span className="text-slate-600 leading-7">
+            {/* 1. Key 渲染 (时间戳胶囊 OR 普通粗体) */}
+            {keyPart && (
+                timestampMatch 
+                ? <span className="inline-block bg-slate-100 text-slate-700 text-xs font-bold px-2 py-0.5 rounded border border-slate-200 mr-2 align-middle mb-0.5 shadow-sm whitespace-nowrap">{keyPart}</span>
+                : <span className="font-bold text-slate-800 mr-1.5">{keyPart}:</span>
+            )}
+            
+            {/* 2. 正文内容 */}
+            {formattedBody}
+
+            {/* 3. 行尾引用 (浮动到右侧) */}
+            {rightCitation && (
+                <span className="float-right ml-2 mt-0.5 text-xs text-slate-400 font-medium bg-slate-50 px-1.5 py-0.5 rounded border border-slate-100 select-none">
+                    {rightCitation}
+                </span>
+            )}
+        </span>
+    );
+
+    // Case A: 纯日期标题
+    if (isDateHeader) {
+        return (
+            <div key={idx} className="mt-5 mb-2 inline-block">
+                <span className="text-sm font-bold text-slate-700 bg-slate-100 px-2 py-1 rounded border border-slate-200 shadow-sm">
+                    {cleanLine}
+                </span>
+            </div>
+        );
+    }
+
+    // Case B: 诊断卡片模式 (Apple Style)
+    if (style === 'card') {
+        return (
+            <div key={idx} className="mb-3 p-3 bg-purple-50/40 rounded-lg border border-purple-100 hover:border-purple-200 transition-colors flex items-start gap-3 group">
+                 <div className="mt-1.5 w-1 h-4 bg-purple-400 rounded-full flex-shrink-0 opacity-80" />
+                 <div className="w-full">
+                    {renderInnerContent()}
+                 </div>
+            </div>
+        );
+    }
+
+    // Case C: 数字列表模式 (Recommendations)
+    if (style === 'numbered') {
+        listCounter++;
+        return (
+            <div key={idx} className="mb-2 pl-2 flex items-start gap-3 group">
+                <span className="mt-0.5 flex items-center justify-center w-5 h-5 bg-amber-100 text-amber-700 text-xs font-bold rounded-full flex-shrink-0 border border-amber-200">
+                    {listCounter}
+                </span>
+                <div className="w-full">
+                    {renderInnerContent()}
+                </div>
+            </div>
+        );
+    }
+
+    // Case D: 普通圆点列表 (Findings, Alarms)
+    return (
+        <div key={idx} className="mb-2 pl-2 flex items-start gap-3 group">
+             <span className="mt-2.5 w-1.5 h-1.5 bg-blue-400 rounded-full flex-shrink-0 opacity-80 shadow-sm" />
+             <div className="w-full">
+                {renderInnerContent()}
+             </div>
+        </div>
+    );
+  });
+};
+
+// --- 行内样式处理器 ---
+const processInlineStyles = (text: string) => {
+    const metricsPattern = KNOWN_METRICS.join('|').replace(/\./g, '\\.'); 
+
+    const regex = new RegExp(
+        `(\\*\\*.*?\\*\\*)|` +                         
+        `\\b(${metricsPattern})(?:\\b|(?=[^a-zA-Z0-9]))|` + 
+        `(CO₂)|` +
+        // Range Highlight: 支持 "469-477" (Hyphen/En-dash)
+        `(\\b(?:approx\\s)?\\d+(?:[\\-–]\\d+)?(?:\\.\\d+)?\\s?(?:ppm|µg\\/m³|lux|%|°C|C)\\b)|` +
+        `\\b((?:median|mean|peak|min|max|score|val)\\s+\\d+(?:\\.\\d+)?)`, 
+        'gi'
+    );
+
+    const parts = text.split(regex).filter(p => p !== undefined && p !== "");
+
+    return parts.map((part, i) => {
+        if (part.startsWith('**') && part.endsWith('**')) {
+            return <span key={i} className="font-bold text-slate-900">{part.slice(2, -2)}</span>;
+        }
+        if (KNOWN_METRICS.some(m => m.toLowerCase() === part.toLowerCase()) || part === 'CO₂') {
+            return <span key={i} className="font-bold text-slate-800">{part}</span>;
+        }
+        if (/\d/.test(part) && (part.includes('ppm') || part.includes('µg') || part.includes('%') || part.includes('°C') || part.includes('lux'))) {
+             return <span key={i} className="font-semibold text-slate-800">{part}</span>;
+        }
+        if (/^(median|mean|peak|min|max|score|val)\s+\d+/.test(part.toLowerCase())) {
+            const [stat, val] = part.split(/\s+/);
+            return <span key={i}>{stat} <span className="font-semibold text-slate-800">{val}</span></span>;
+        }
+        return <span key={i}>{part}</span>;
+    });
+};
+
+export default LlmAnswer;
