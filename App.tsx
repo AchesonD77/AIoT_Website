@@ -9,6 +9,15 @@ import { LoadingView } from './components/LoadingView';
 import { fetchAnalysis } from './services/apiService';
 import { QueryState } from './types';
 
+// Curated list of high-quality forest/nature background images
+const BACKGROUND_IMAGES = [
+  "https://images.unsplash.com/photo-1542273917363-3b1817f69a2d?q=80&w=2674&auto=format&fit=crop", // Original Forest
+  "https://images.unsplash.com/photo-1441974231531-c6227db76b6e?q=80&w=2560&auto=format&fit=crop", // Sunlight through trees
+  "https://images.unsplash.com/photo-1511497584788-876760111969?q=80&w=2560&auto=format&fit=crop", // Misty mysterious forest
+  "https://images.unsplash.com/photo-1473448912268-2022ce9509d8?q=80&w=2560&auto=format&fit=crop", // Deep dark woods
+  "https://images.unsplash.com/photo-1513836279014-a89f7a76ae86?q=80&w=2560&auto=format&fit=crop"  // Cold/Clean Nature
+];
+
 const App: React.FC = () => {
   const [queryState, setQueryState] = useState<QueryState>({
     isLoading: false,
@@ -33,6 +42,12 @@ const App: React.FC = () => {
 
   // We only show the actual results content if we have data AND we are not loading.
   const showResultsContent = !!queryState.data && !queryState.isLoading;
+
+  // Initialize background image only once on mount
+  const [heroImage] = useState(() => {
+    const randomIndex = Math.floor(Math.random() * BACKGROUND_IMAGES.length);
+    return BACKGROUND_IMAGES[randomIndex];
+  });
 
   useEffect(() => {
     // When switching to results layout, scroll to top
@@ -102,16 +117,14 @@ const App: React.FC = () => {
           ${isResultsLayout ? 'min-h-[140px] pt-24 pb-6 bg-slate-50 flex-none' : 'min-h-[600px] flex-grow'}
         `}
         >
-          {/* Background Image - Fades out in Results Mode */}
-          <div
-            className={`absolute inset-0 bg-cover bg-center z-0 transition-opacity duration-1000 ease-in-out will-change-opacity ${
-              isResultsLayout ? 'opacity-0' : 'opacity-100'
-            }`}
-            style={{
-              backgroundImage:
-                'url("https://images.unsplash.com/photo-1441974231531-c6227db76b6e?q=80&w=2560&auto=format&fit=crop")',
-            }}
-          ></div>
+            {/* Background Image - Fades out in Results Mode */}
+            {/* CHANGED: Used state variable heroImage instead of hardcoded URL */}
+            <div 
+              className={`absolute inset-0 bg-cover bg-[center_top_30%] z-0 transition-opacity duration-1000 ease-in-out will-change-opacity ${isResultsLayout ? 'opacity-0' : 'opacity-100'}`}
+              style={{ 
+                backgroundImage: `url("${heroImage}")`,
+              }}
+            ></div>
 
           {/* Gradient Overlay - Fades out in Results Mode */}
           <div
@@ -177,22 +190,33 @@ const App: React.FC = () => {
         {(showResultsContent || isClosing) && queryState.data && (
           <div
             ref={resultsRef}
-            className={`max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-2 bg-slate-50/50 transition-all duration-500 ease-in-out transform-gpu ${
+            // ✅ 修改点 1: 容器样式调整
+            // - 添加 relative 和 overflow-hidden 以包含背景光影
+            // - 将背景色从 bg-slate-50/50 改为更透明的 bg-white/30
+            // - 添加 backdrop-blur-lg 制造毛玻璃效果，使背景光影更柔和地透出
+            className={`relative overflow-hidden max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 bg-white/30 backdrop-blur-lg rounded-3xl mt-6 transition-all duration-500 ease-in-out transform-gpu ${
               isClosing
                 ? // Fix for layout stutter: Position absolute during closing to remove from flow immediately.
                   'absolute left-0 right-0 top-full opacity-0 translate-y-20 scale-[0.98] pointer-events-none'
                 : 'opacity-100 translate-y-0 scale-100 animate-fade-in-up' // Enter/Active State
             }`}
           >
+            {/* ✅ 修改点 2: 添加 Apple 风格背景光影 (Blobs) */}
+            {/* Blob 1: 右上角 - 修改为紫色调 (Violet/Purple) */}
+            <div className="pointer-events-none absolute -top-[30%] -right-[10%] w-[70%] h-[70%] rounded-full bg-gradient-to-br from-violet-400/30 via-purple-300/20 to-indigo-200/10 blur-[100px] -z-10 animate-pulse-slow"></div>
+            
+            {/* Blob 2: 左下角 - 修改为紫色调 (Violet/Purple) - 保持一致 */}
+            <div className="pointer-events-none absolute -bottom-[30%] -left-[10%] w-[70%] h-[70%] rounded-full bg-gradient-to-tr from-violet-400/30 via-purple-300/20 to-indigo-200/10 blur-[120px] -z-10 animate-pulse-slow" style={{ animationDelay: '1.5s' }}></div>
+
             {/* 1. Time Understanding */}
-            <div className="mb-8">
+            <div className="mb-8 relative z-10">
               <ParsedTimeBadge answer={queryState.data?.llm_answer} />
             </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start relative z-10">
               {/* 2. Left Column: Timeline (Evidence) */}
               <div className="lg:col-span-4 lg:sticky lg:top-24">
-                <EvidenceTimeline evidence={queryState.data.evidence} />
+                <EvidenceTimeline answer={queryState.data?.llm_answer} />
               </div>
 
               {/* 3. Right Column: LLM Report */}

@@ -1,7 +1,7 @@
 import React, { useMemo } from 'react';
 import { Sparkles } from 'lucide-react';
 
-// --- 1. Core Metrics Vocabulary ---
+// --- 1. 核心指标词汇库 ---
 const KNOWN_METRICS = [
     "Temperature", "Temp", "Humidity", "RH",
     "CO2", "CO₂", "PM2.5", "PM10", "IEQ", 
@@ -15,10 +15,9 @@ interface ParsedTimeBadgeProps {
 
 export const ParsedTimeBadge: React.FC<ParsedTimeBadgeProps> = ({ answer }) => {
   
-  // --- 2. Extraction Logic (Extract "0) Direct Answer") ---
+  // --- 2. 提取逻辑 ---
   const directAnswerContent = useMemo(() => {
     if (!answer) return null;
-    // Regex to capture text after "0) Direct Answer" until the next numbered section or end of string
     const regex = /(?:^|\n)0\)\s*Direct\s*Answer:?\s*([\s\S]*?)(?=(?:\n\d+\))|$)/i;
     const match = answer.match(regex);
     return match ? match[1].trim() : null;
@@ -27,8 +26,9 @@ export const ParsedTimeBadge: React.FC<ParsedTimeBadgeProps> = ({ answer }) => {
   if (!directAnswerContent) return null;
 
   return (
-    // --- UI Container: Apple Style High-Contrast Card ---
-    <div className="group relative mb-8 overflow-hidden rounded-2xl bg-white/95 p-6 
+    // --- UI 容器 ---
+    // 保持紧凑优化：p-4, mb-4
+    <div className="group relative mb-4 overflow-hidden rounded-2xl bg-white/95 p-6
                     shadow-[0_20px_40px_-12px_rgba(0,0,0,0.1)] 
                     ring-1 ring-black/5 
                     backdrop-blur-xl 
@@ -42,28 +42,34 @@ export const ParsedTimeBadge: React.FC<ParsedTimeBadgeProps> = ({ answer }) => {
         className="pointer-events-none absolute inset-0 -z-10 opacity-0 transition-opacity duration-700 ease-out group-hover:opacity-100"
         style={{
             background: `radial-gradient(
-                800px circle at 50% -20%,
+                1200px circle at 50% -10%,
                 rgba(167, 139, 250, 0.25),
                 transparent 60%
             )`
         }}
       />
 
+      {/* 保持紧凑优化：gap-3 */}
       <div className="relative flex items-start gap-5">
         {/* Icon */}
         <div className="flex-shrink-0 pt-0.5 transition-transform duration-500 ease-out group-hover:rotate-12 group-hover:scale-110">
-          <div className="flex h-11 w-11 items-center justify-center rounded-full bg-gradient-to-br from-violet-600 to-indigo-600 shadow-lg shadow-violet-500/30 text-white transition-shadow group-hover:shadow-violet-500/60">
+          {/* 恢复原版大小：h-11 w-11 */}
+          <div className="flex h-12 w-12 items-center justify-center rounded-full bg-gradient-to-br from-violet-600 to-indigo-600 shadow-lg shadow-violet-500/30 text-white transition-shadow group-hover:shadow-violet-500/60">
+            {/* 恢复原版大小：h-5 w-5 */}
             <Sparkles className="h-5 w-5" fill="currentColor" fillOpacity={0.2} />
           </div>
         </div>
 
         {/* Content Area */}
         <div className="flex-1">
-          <h3 className="mb-2.5 text-lg font-bold tracking-tight text-violet-900 transition-colors group-hover:text-violet-700">
+          {/* 恢复原版字号：text-lg */}
+          {/* 保持紧凑间距：mb-1 */}
+          <h3 className="mb-2.5 text-xl font-bold tracking-tight text-violet-900 transition-colors group-hover:text-violet-700">
             Key Insights
           </h3>
           
-          <div className="text-[15px] leading-relaxed text-slate-700 font-medium">
+          {/* 保持紧凑行高：leading-snug */}
+          <div className="text-[14px] leading-snug text-slate-700 font-medium">
              {formatDirectAnswer(directAnswerContent)}
           </div>
         </div>
@@ -72,42 +78,60 @@ export const ParsedTimeBadge: React.FC<ParsedTimeBadgeProps> = ({ answer }) => {
   );
 };
 
-// --- 3. Rich Text Formatting Logic ---
+// --- 3. 富文本渲染逻辑 ---
 const formatDirectAnswer = (text: string) => {
+    const cleanedText = text.replace(/([ \t]*\[[\d- :;,]+\](?:-[\[\d- :;,]+\])?)[ \t]*[.,;]?/g, '');
     const metricsPattern = KNOWN_METRICS.join('|').replace(/\./g, '\\.'); 
 
     const regex = new RegExp(
+        // A. Section Headers (通用小标题识别)
+        // Update: [a-zA-Z0-9\s\-]+ 允许包含数字和连字符，适配日期格式 "2025-07-13"
+        `((?:^|\\n)\\s*-\\s*[a-zA-Z0-9\\s\\-]+:)` + `|` +
+
+        // B. Markdown Bold
         `(\\*\\*.*?\\*\\*)|` +                         
+        
+        // C. Metrics
         `\\b(${metricsPattern})(?:\\b|(?=[^a-zA-Z0-9]))|` + 
         `(CO₂)|` +
-        // Values Regex (numbers, ranges, units)
+        
+        // D. Values
         `((?:≈|~|>=?|<=?|approx\\s)?\\d+(?:[\\-–]\\d+)?(?:\\.\\d+)?\\s?(?:ppm|µg\\/m³|lux|%|°C|C)?)|` +
-        // Citations
-        `(\\[[\\d- :]+(?:]|.*\\]))`, 
+        `\\b((?:median|mean|peak|min|max|score|val)\\s+\\d+(?:\\.\\d+)?)`, 
         'gi'
     );
 
-    const parts = text.split(regex).filter(p => p !== undefined && p !== "");
+    const parts = cleanedText.split(regex).filter(p => p !== undefined && p !== "");
 
     return parts.map((part, i) => {
-        // A. Bold text
+        // A. Section Header Logic
+        // Update: 同步更新验证逻辑，支持数字和连字符
+        if (/^\s*(\n)?\s*-\s*[a-zA-Z0-9\s\-]+:$/.test(part)) {
+            const label = part.replace(/^\n/, '').trim();
+            // 保持紧凑优化：mt-2 mb-0.5
+            return (
+                <span key={i} className="block mt-3 mb-1 font-bold text-violet-600">
+                    {label}
+                </span>
+            );
+        }
+
+        // B. Bold text
         if (part.startsWith('**') && part.endsWith('**')) {
             return <span key={i} className="font-bold text-slate-900">{part.slice(2, -2)}</span>;
         }
 
-        // B. Metrics (IEQ, CO2, etc.) -> NOW STYLED AS PILLS/CARDS
-        // ✅ Change: Applied the "Pill" style here
+        // C. Metrics
         if (KNOWN_METRICS.some(m => m.toLowerCase() === part.toLowerCase()) || part === 'CO₂') {
             const display = part === 'CO2' ? <span>CO<sub>2</sub></span> : part;
             return (
-                <span key={i} className="inline-flex items-center px-2 py-0.5 mx-0.5 rounded-md bg-slate-100 text-slate-900 font-bold text-[13px] ring-1 ring-inset ring-slate-200 align-baseline transition-all group-hover:ring-violet-200/50 group-hover:bg-white">
+                <span key={i} className="inline-flex items-center px-1.5 py-0 mx-0.5 rounded bg-slate-100 text-slate-900 font-bold text-[12px] ring-1 ring-inset ring-slate-200 align-baseline transition-all group-hover:ring-violet-200/50 group-hover:bg-white">
                     {display}
                 </span>
             );
         }
         
-        // C. Values (400 ppm, 3.8, etc.) -> NOW JUST BOLD TEXT
-        // ✅ Change: Removed "Pill" style, reverted to bold text
+        // D. Values
         const isValue = /\d/.test(part) && (
             part.includes('ppm') || part.includes('µg') || part.includes('%') || part.includes('°C') || part.includes('lux') ||
             part.includes('≈') || part.includes('~') || 
@@ -117,12 +141,6 @@ const formatDirectAnswer = (text: string) => {
              return <span key={i} className="font-bold text-slate-900">{part}</span>;
         }
 
-        // D. Citations -> Hide
-        if (part.startsWith('[') && part.includes(']')) {
-             return null;
-        }
-
-        // E. Normal text
         return <span key={i}>{part}</span>;
     });
 };

@@ -1,20 +1,7 @@
-<div align="center">
-<img width="1200" height="475" alt="GHBanner" src="https://github.com/user-attachments/assets/0aa67016-6eaf-458a-adb2-6e31a0763ed6" />
-</div>
+in developing, comming soon.
 
-# Run and deploy your AI Studio app
-
-This contains everything you need to run your app locally.
-
-View your app in AI Studio: https://ai.studio/apps/drive/1raFlBI1vl43T2gdLiCkFl6EXCrNhEKlQ
-
-## Run Locally
-
-**Prerequisites:**  Node.js
-
-
-1. Install dependencies:
-   `npm install`
-2. Set the `GEMINI_API_KEY` in [.env.local](.env.local) to your Gemini API key
-3. Run the app:
-   `npm run dev`
+UI 和对传入进来的json语言进行解析和显示
+1. LLMAnswer - 对应 回答界面右边的大部分（intelligence summary）
+2. ParsedTimeBadge - 对应搜索框下面的 key insights 快速回答部分
+3. EvidenceTimeline - 对应左边的houly chunks timeline
+4. QueryInput - 对应最开始的搜索框组件

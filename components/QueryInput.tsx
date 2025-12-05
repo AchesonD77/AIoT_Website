@@ -18,8 +18,8 @@ interface Suggestion {
 
 const SUGGESTIONS: Suggestion[] = [
   { 
-    label: "Stuffy air on Sept 11?", 
-    question: "On 20250911, during 12 to 20, did CO2 or PM2.5 spike? List the specific hours and show snippet evidence. And analysis the reasons." 
+    label: "Stuffy air on Sept 5?", 
+    question: "On 20250905, during 12 to 20, did CO2 or PM2.5 spike? List the specific hours and show snippet evidence. And analysis the reasons." 
   },
   { 
     label: "IEQ Minimum Drivers July 11", 
@@ -63,7 +63,7 @@ const SUGGESTIONS: Suggestion[] = [
   },
   { 
     label: "IEQ Stability Comparison", 
-    question: "Compare afternoon periods (post-noon to early evening) on 2025-06-09 vs 2025-09-12: which day has more stable IEQ?" 
+    question: "Compare afternoon periods (post-noon to early evening) on 2025-06-09 vs 2025-08-04: which day has more stable IEQ?" 
   },
   { 
     label: "Temp Noon vs Afternoon July 4", 
@@ -103,20 +103,14 @@ export const QueryInput: React.FC<QueryInputProps> = ({
   const [randomSuggestions, setRandomSuggestions] = useState<Suggestion[]>([]);
   const [isSpinning, setIsSpinning] = useState(false);
 
-  // Extract shuffle logic so it can be called manually
   const refreshSuggestions = () => {
     setIsSpinning(true);
-    // Shuffle and pick 2
     const shuffled = [...SUGGESTIONS].sort(() => 0.5 - Math.random());
     setRandomSuggestions(shuffled.slice(0, 2));
-    
-    // Reset animation state after duration
     setTimeout(() => setIsSpinning(false), 500);
   };
 
   useEffect(() => {
-    // Only refresh suggestions when we are in (or returning to) the "home" state
-    // i.e., when suggestions are visible (hideSuggestions is false).
     if (!hideSuggestions) {
       refreshSuggestions();
     }
@@ -139,11 +133,24 @@ export const QueryInput: React.FC<QueryInputProps> = ({
   return (
     <div className="w-full relative z-30">
       <form onSubmit={handleSubmit} className="relative group">
-        {/* Glow effect */}
-        <div className="absolute -inset-1 bg-gradient-to-r from-polimi-600 to-indigo-600 rounded-full blur opacity-20 group-hover:opacity-40 transition duration-500"></div>
+        
+        {/* Glow effect (Background) - 保持原来的光晕，但也让它稍微动一下 */}
+        <div className="absolute -inset-1 bg-gradient-to-r from-polimi-600 to-indigo-600 rounded-full blur opacity-20 group-hover:opacity-50 transition duration-700 group-hover:scale-[1.02]"></div>
         
         {/* Main Input Container - Dark Pill Shape */}
-        <div className="relative flex items-center bg-slate-800 rounded-full shadow-2xl overflow-hidden p-2 transition-all border border-slate-700 focus-within:ring-2 focus-within:ring-polimi-500/50">
+        {/* ✅ 修改点：
+            1. transition-all duration-500 ease-out: 丝滑动画基础
+            2. hover:scale-[1.02]: 鼠标悬停放大 1.02 倍
+            3. hover:shadow-[...]: 悬浮时增加带有紫色调的高级阴影
+            4. hover:border-polimi-500/50: 悬浮时边框微亮
+        */}
+        <div className="relative flex items-center bg-slate-800 rounded-full overflow-hidden p-2 border border-slate-700 
+                        shadow-2xl
+                        transition-all duration-500 ease-out
+                        focus-within:ring-2 focus-within:ring-polimi-500/50 focus-within:scale-[1.02]
+                        hover:scale-[1.02]
+                        hover:border-polimi-500/50
+                        hover:shadow-[0_15px_40px_-10px_rgba(124,58,237,0.3)]">
           
           <input
             type="text"
@@ -154,7 +161,7 @@ export const QueryInput: React.FC<QueryInputProps> = ({
             disabled={isLoading}
           />
           
-          {/* Clear / Back Button - Only shows when there are results or text to clear while in result mode */}
+          {/* Clear / Back Button */}
           {hasResults && (
             <button
               type="button"
@@ -173,7 +180,7 @@ export const QueryInput: React.FC<QueryInputProps> = ({
               flex-shrink-0 flex items-center justify-center w-12 h-12 rounded-full transition-all duration-300 ml-2
               ${isLoading || !value.trim() 
                 ? 'bg-slate-700 text-slate-500 cursor-not-allowed' 
-                : 'bg-polimi-500 text-white hover:bg-polimi-400 shadow-lg transform hover:scale-105'}
+                : 'bg-polimi-500 text-white hover:bg-polimi-400 shadow-lg transform hover:scale-110 active:scale-95'}
             `}
           >
             {isLoading ? (
@@ -185,7 +192,7 @@ export const QueryInput: React.FC<QueryInputProps> = ({
         </div>
       </form>
       
-      {/* Suggestions - Conditionally Rendered */}
+      {/* Suggestions */}
       {!hideSuggestions && (
         <div className="mt-4 flex flex-wrap justify-center sm:justify-start gap-2 text-sm pl-4 transition-all duration-500">
           <button 
@@ -202,7 +209,7 @@ export const QueryInput: React.FC<QueryInputProps> = ({
              <button 
                key={idx}
                onClick={() => onChange(item.question)} 
-               className="px-3 py-1 bg-white/50 backdrop-blur-sm border border-slate-200 rounded-full text-slate-700 hover:border-polimi-500 hover:text-polimi-700 transition-colors text-left max-w-full truncate animate-fade-in"
+               className="px-3 py-1 bg-white/50 backdrop-blur-sm border border-slate-200 rounded-full text-slate-700 hover:border-polimi-500 hover:text-polimi-700 transition-colors text-left max-w-full truncate animate-fade-in hover:scale-105 transform duration-200"
                title={item.question}
                style={{ animationDelay: `${idx * 100}ms` }}
              >
