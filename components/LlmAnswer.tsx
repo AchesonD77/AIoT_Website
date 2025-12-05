@@ -138,39 +138,56 @@ const formatText = (text: string, style: 'bullet' | 'numbered' | 'card' = 'bulle
   return lines.map((line, idx) => {
     let cleanLine = line.trim();
     
-    // 1. 移除列表符号
+    // 1. 移除列表符号和 Markdown 粗体标记 (如果它在行首)
+    // 这样能确保 "**2025...**" 也能被正确识别
     if (/^[*-]\s/.test(cleanLine) || /^\d+[\.\)]\s/.test(cleanLine)) {
         cleanLine = cleanLine.replace(/^(?:[*-]|\d+[\.\)])\s+/, '');
     }
+    // 移除行首的 Markdown 加粗符 (防止干扰日期检测)
+    cleanLine = cleanLine.replace(/^\*\*/, '');
 
-    // 2. 纯日期标题检测
-    const isDateHeader = /^\d{4}-\d{2}-\d{2}/.test(cleanLine) && cleanLine.length < 25;
+    // 2. 日期标题检测 (Pure Date Header)
+    const rawCheck = cleanLine.replace(/[*_:]/g, '').trim();
+    const isDateHeader = /^\d{4}-\d{2}-\d{2}/.test(rawCheck) && rawCheck.length < 15;
 
-    // --- 智能处理 Key 和 Citation ---
-    let keyPart = null;
+    // --- A. 提取【行尾】引用 (支持多个，且容忍末尾的句号/空格) ---
+    let rightCitations: string[] = [];
     let contentPart = cleanLine;
-    let rightCitation = null; 
 
-    // A. 提取【行尾】引用 (Keep Right Logic)
-    // 提取 [2025-09-08] 这种在句子最后面的来源标记，把它放到右边
-    const trailingCitationRegex = /(\s*\[[\d- :]+\](?:-\[[\d- :]+\])?(?:,\s*\[[\d- :]+\])*\s*)$/;
-    const trailingMatch = cleanLine.match(trailingCitationRegex);
-    if (trailingMatch) {
-        rightCitation = trailingMatch[1].trim();
-        contentPart = cleanLine.substring(0, trailingMatch.index).trim();
+    // 正则解释: 匹配行尾的 [xxx] 序列，允许后面跟句号(.)或空格
+    const trailingPattern = /((?:\[[\d- :]+\](?:-[\[\d- :]+\])?(?:,\s*|\s+)*)+)[.\s]*$/;
+    const tailMatch = cleanLine.match(trailingPattern);
+
+    if (tailMatch) {
+        const rawTail = tailMatch[1]; // 捕获引用部分 (不含句号)
+        const individualCitations = rawTail.match(/\[[\d- :]+\](?:-[\[\d- :]+\])?/g);
+        if (individualCitations) {
+            rightCitations = individualCitations;
+        }
+        // 从正文中切除引用部分
+        contentPart = cleanLine.substring(0, tailMatch.index).trim();
+        // 如果切除后末尾有句号或逗号，根据美观度决定是否移除
+        // 这里移除它，让引用显得更干净
+        if (contentPart.endsWith('.') || contentPart.endsWith(',')) {
+            contentPart = contentPart.slice(0, -1).trim();
+        }
     }
 
-    // B. 提取【行首】Key (Timestamp or Text)
-    // 注意：这里我们恢复逻辑，不把时间戳移动到右边，而是提取为 keyPart 并在左侧渲染
-    const timestampKeyPattern = /^(\d{4}-\d{2}-\d{2}.*?\d{2}:\d{2}):/;
+    // --- B. 提取【行首】Key (Timestamp Capsule 逻辑) ---
+    let keyPart = null;
+    let isTimestampKey = false;
+
+    // 支持 YYYY-MM-DD HH:mm-HH:mm: 格式 (包含 En-dash 或 Hyphen)
+    // 同时也支持 wrap 在 Markdown 里的情况 (因为我们前面已经清理了开头的 **)
+    const timestampKeyPattern = /^(\d{4}-\d{2}-\d{2}.*?\d{2}:\d{2})\**:/;
     const timestampMatch = contentPart.match(timestampKeyPattern);
 
     if (timestampMatch) {
-        // 时间戳 Key -> 设为 keyPart，将在渲染时变成灰色胶囊
-        keyPart = timestampMatch[1]; 
+        keyPart = timestampMatch[1].replace(/\*\*/g, ''); // 确保 Key 里没有残留的 **
         contentPart = contentPart.substring(timestampMatch[0].length).trim();
+        isTimestampKey = true;
     } else {
-        // 普通 Key -> 设为 keyPart，将在渲染时变成粗体
+        // 普通 Key (例如 "Note:", "CO2:")
         const generalKeyMatch = contentPart.match(/^([A-Za-z0-9 \(\)\.\-\/&,]+?):/);
         if (generalKeyMatch && generalKeyMatch[1].length < 60) {
             keyPart = generalKeyMatch[1];
@@ -183,20 +200,24 @@ const formatText = (text: string, style: 'bullet' | 'numbered' | 'card' = 'bulle
 
     const renderInnerContent = () => (
         <span className="text-slate-600 leading-7">
-            {/* 1. Key 渲染 (时间戳胶囊 OR 普通粗体) */}
+            {/* 1. Key 渲染 (Capsule or Bold) */}
             {keyPart && (
-                timestampMatch 
-                ? <span className="inline-block bg-slate-100 text-slate-700 text-xs font-bold px-2 py-0.5 rounded border border-slate-200 mr-2 align-middle mb-0.5 shadow-sm whitespace-nowrap">{keyPart}</span>
+                isTimestampKey 
+                ? <span className="inline-block bg-slate-100 text-slate-700 text-xs font-bold px-2 py-0.5 rounded border border-slate-200 mr-3 align-middle mb-0.5 shadow-sm whitespace-nowrap">{keyPart}</span>
                 : <span className="font-bold text-slate-800 mr-1.5">{keyPart}:</span>
             )}
             
             {/* 2. 正文内容 */}
             {formattedBody}
 
-            {/* 3. 行尾引用 (浮动到右侧) */}
-            {rightCitation && (
-                <span className="float-right ml-2 mt-0.5 text-xs text-slate-400 font-medium bg-slate-50 px-1.5 py-0.5 rounded border border-slate-100 select-none">
-                    {rightCitation}
+            {/* 3. 行尾引用 (多个堆叠) */}
+            {rightCitations.length > 0 && (
+                <span className="float-right ml-2 flex flex-col items-end gap-1 mt-0.5">
+                    {rightCitations.map((citation, cIdx) => (
+                        <span key={cIdx} className="text-xs text-slate-400 font-medium bg-slate-50 px-1.5 py-0.5 rounded border border-slate-100 select-none whitespace-nowrap">
+                            {citation}
+                        </span>
+                    ))}
                 </span>
             )}
         </span>
@@ -207,13 +228,13 @@ const formatText = (text: string, style: 'bullet' | 'numbered' | 'card' = 'bulle
         return (
             <div key={idx} className="mt-5 mb-2 inline-block">
                 <span className="text-sm font-bold text-slate-700 bg-slate-100 px-2 py-1 rounded border border-slate-200 shadow-sm">
-                    {cleanLine}
+                    {rawCheck}
                 </span>
             </div>
         );
     }
 
-    // Case B: 诊断卡片模式 (Apple Style)
+    // Case B: 诊断卡片模式
     if (style === 'card') {
         return (
             <div key={idx} className="mb-3 p-3 bg-purple-50/40 rounded-lg border border-purple-100 hover:border-purple-200 transition-colors flex items-start gap-3 group">
@@ -225,7 +246,7 @@ const formatText = (text: string, style: 'bullet' | 'numbered' | 'card' = 'bulle
         );
     }
 
-    // Case C: 数字列表模式 (Recommendations)
+    // Case C: 数字列表模式
     if (style === 'numbered') {
         listCounter++;
         return (
@@ -240,7 +261,7 @@ const formatText = (text: string, style: 'bullet' | 'numbered' | 'card' = 'bulle
         );
     }
 
-    // Case D: 普通圆点列表 (Findings, Alarms)
+    // Case D: 普通圆点列表
     return (
         <div key={idx} className="mb-2 pl-2 flex items-start gap-3 group">
              <span className="mt-2.5 w-1.5 h-1.5 bg-blue-400 rounded-full flex-shrink-0 opacity-80 shadow-sm" />
@@ -260,8 +281,8 @@ const processInlineStyles = (text: string) => {
         `(\\*\\*.*?\\*\\*)|` +                         
         `\\b(${metricsPattern})(?:\\b|(?=[^a-zA-Z0-9]))|` + 
         `(CO₂)|` +
-        // Range Highlight: 支持 "469-477" (Hyphen/En-dash)
-        `(\\b(?:approx\\s)?\\d+(?:[\\-–]\\d+)?(?:\\.\\d+)?\\s?(?:ppm|µg\\/m³|lux|%|°C|C)\\b)|` +
+        // 数值高亮: 增加对 ≈, ~, > 等符号的支持
+        `((?:≈|~|>=?|<=?|approx\\s)?\\d+(?:[\\-–]\\d+)?(?:\\.\\d+)?\\s?(?:ppm|µg\\/m³|lux|%|°C|C)?)|` +
         `\\b((?:median|mean|peak|min|max|score|val)\\s+\\d+(?:\\.\\d+)?)`, 
         'gi'
     );
@@ -269,19 +290,34 @@ const processInlineStyles = (text: string) => {
     const parts = text.split(regex).filter(p => p !== undefined && p !== "");
 
     return parts.map((part, i) => {
+        // 1. Markdown Bold
         if (part.startsWith('**') && part.endsWith('**')) {
             return <span key={i} className="font-bold text-slate-900">{part.slice(2, -2)}</span>;
         }
+
+        // 2. Metrics (自动转换 CO2 -> CO₂)
         if (KNOWN_METRICS.some(m => m.toLowerCase() === part.toLowerCase()) || part === 'CO₂') {
-            return <span key={i} className="font-bold text-slate-800">{part}</span>;
+            const display = part === 'CO2' ? <span>CO<sub>2</sub></span> : part;
+            return <span key={i} className="font-bold text-slate-800">{display}</span>;
         }
-        if (/\d/.test(part) && (part.includes('ppm') || part.includes('µg') || part.includes('%') || part.includes('°C') || part.includes('lux'))) {
+        
+        // 3. Values Highlighting
+        const isValue = /\d/.test(part) && (
+            part.includes('ppm') || part.includes('µg') || part.includes('%') || part.includes('°C') || part.includes('lux') ||
+            part.includes('≈') || part.includes('~') || 
+            /^\d/.test(part) 
+        );
+
+        if (isValue) {
              return <span key={i} className="font-semibold text-slate-800">{part}</span>;
         }
+        
+        // 4. Stat phrases (e.g., "median 66")
         if (/^(median|mean|peak|min|max|score|val)\s+\d+/.test(part.toLowerCase())) {
             const [stat, val] = part.split(/\s+/);
             return <span key={i}>{stat} <span className="font-semibold text-slate-800">{val}</span></span>;
         }
+
         return <span key={i}>{part}</span>;
     });
 };
