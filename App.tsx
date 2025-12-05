@@ -186,7 +186,7 @@ const App: React.FC = () => {
           >
             {/* 1. Time Understanding */}
             <div className="mb-8">
-              <ParsedTimeBadge data={queryState.data.parsed_data} />
+              <ParsedTimeBadge answer={queryState.data?.llm_answer} />
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">

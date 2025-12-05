@@ -1,14 +1,7 @@
 import React, { useMemo } from 'react';
-import { Bot, Lightbulb, Activity, Stethoscope, FileText } from 'lucide-react';
+import { Bot, Lightbulb, Activity, Stethoscope, FileText, AlertTriangle } from 'lucide-react';
 
-// --- 1. 图标定义 ---
-const AlertCardIcon = () => (
-    <svg className="w-5 h-5 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-    </svg>
-);
-
-// --- 2. 核心指标词汇库 ---
+// --- 1. 核心指标词汇库 ---
 const KNOWN_METRICS = [
     "Temperature", "Temp", "Humidity", "RH",
     "CO2", "CO₂", "PM2.5", "PM10", "IEQ", 
@@ -16,33 +9,45 @@ const KNOWN_METRICS = [
     "Door events", "Notable hours", "Particles", "Ventilation"
 ];
 
-// --- 3. 板块配置 ---
+// --- 2. 板块配置 ---
 const SECTIONS_CONFIG = [
   { 
     id: 'findings', 
     title: 'Findings & Observations', 
-    icon: <Activity className="w-5 h-5 text-blue-600" />, 
+    icon: <Activity className="w-5 h-5 text-white" />, 
+    gradient: 'from-blue-500 to-cyan-500', 
+    shadow: 'shadow-blue-500/30',
+    titleColor: 'text-blue-900',
     regexKeywords: /findings|observations/i,
     style: 'bullet'
   },
   { 
     id: 'alarms', 
     title: 'Alarms & Anomalies', 
-    icon: <AlertCardIcon />, 
+    icon: <AlertTriangle className="w-5 h-5 text-white" />,
+    gradient: 'from-rose-500 to-red-600', 
+    shadow: 'shadow-rose-500/30',
+    titleColor: 'text-rose-900',
     regexKeywords: /alarms|anomalies|spike/i,
     style: 'bullet'
   },
   { 
     id: 'diagnostics', 
     title: 'Diagnostics', 
-    icon: <Stethoscope className="w-5 h-5 text-purple-600" />, 
+    icon: <Stethoscope className="w-5 h-5 text-white" />, 
+    gradient: 'from-violet-500 to-purple-600', 
+    shadow: 'shadow-violet-500/30',
+    titleColor: 'text-violet-900',
     regexKeywords: /diagnostics|cause/i,
     style: 'card'
   },
   { 
     id: 'recommendations', 
     title: 'Recommendations', 
-    icon: <Lightbulb className="w-5 h-5 text-amber-500" />, 
+    icon: <Lightbulb className="w-5 h-5 text-white" />, 
+    gradient: 'from-amber-400 to-orange-500', 
+    shadow: 'shadow-amber-500/30',
+    titleColor: 'text-amber-900',
     regexKeywords: /recommendations|actions/i,
     style: 'numbered'
   },
@@ -54,7 +59,7 @@ interface LlmAnswerProps {
 
 export const LlmAnswer: React.FC<LlmAnswerProps> = ({ answer }) => {
 
-  // --- 解析逻辑 ---
+  // --- 解析逻辑 (保持不变) ---
   const parsedContent = useMemo(() => {
     if (!answer) return {};
 
@@ -82,47 +87,86 @@ export const LlmAnswer: React.FC<LlmAnswerProps> = ({ answer }) => {
   const isQuickAnswer = Object.keys(parsedContent).length === 0 || parsedContent.raw;
 
   return (
-    <div className="bg-white rounded-xl shadow-lg border border-slate-100 overflow-hidden font-sans">
+    // --- 主容器：Apple 风格玻璃拟态卡片 + 高级悬浮交互 ---
+    // group: 用于控制内部元素的 hover 状态
+    // transition-all duration-500 ease-out: 丝滑过渡
+    // hover:scale-[1.02]: 悬浮轻微放大
+    // hover:shadow-[...purple...]: 悬浮出现深邃紫光阴影
+    // hover:ring-violet-500/30: 悬浮边框变紫
+    <div className="group relative overflow-hidden rounded-2xl bg-white/95 p-6 
+                    shadow-[0_20px_40px_-12px_rgba(0,0,0,0.1)] 
+                    ring-1 ring-black/5 
+                    backdrop-blur-xl 
+                    transition-all duration-500 ease-out
+                    hover:scale-[1.02]
+                    hover:shadow-[0_30px_60px_-15px_rgba(124,58,237,0.3)]
+                    hover:ring-violet-500/30">
+      
+      {/* 顶部装饰光晕 (增强紫光氛围) */}
+      <div className="absolute top-0 right-0 -z-10 h-64 w-64 translate-x-1/3 translate-y-[-50%] rounded-full bg-violet-400/10 blur-3xl transition-all group-hover:bg-violet-400/20" />
+      <div className="absolute bottom-0 left-0 -z-10 h-32 w-32 translate-x-[-50%] translate-y-[50%] rounded-full bg-blue-400/5 blur-3xl transition-all group-hover:bg-blue-400/15" />
+
       {/* Header */}
-      <div className="bg-blue-600 px-6 py-4 flex items-center gap-3 text-white">
-        <Bot className="w-6 h-6" />
-        <h2 className="text-lg font-bold tracking-wide">AI Analysis Report</h2>
+      <div className="flex items-center gap-4 mb-8 border-b border-slate-100/80 pb-6">
+        {/* 主图标容器：增加 hover 时的旋转和放大动画 */}
+        <div className="flex-shrink-0 transition-transform duration-500 ease-out group-hover:rotate-12 group-hover:scale-110">
+            <div className="flex h-12 w-12 items-center justify-center rounded-full bg-gradient-to-br from-slate-700 to-slate-900 shadow-lg text-white">
+            <Bot className="h-6 w-6" />
+            </div>
+        </div>
+        <div>
+           {/* 更新后的标题 */}
+           <h2 className="text-xl font-bold tracking-tight text-slate-900">Environmental Insights and Intelligence Summary</h2>
+           <p className="text-sm text-slate-500 font-medium">Comprehensive breakdown of environmental metrics</p>
+        </div>
       </div>
       
-      <div className="p-6 grid gap-8">
+      {/* Content Grid */}
+      <div className="space-y-10">
         {!isQuickAnswer && SECTIONS_CONFIG.map((section) => {
             const content = parsedContent[section.id];
             if (!content) return null;
 
             return (
                 <div key={section.id} className="relative">
-                    <div className="flex items-center gap-2 mb-3">
-                        {section.icon}
-                        <h3 className="font-bold text-slate-800 text-base">{section.title}</h3>
+                    {/* Section Header */}
+                    <div className="flex items-center gap-3 mb-4">
+                        <div className={`flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-br ${section.gradient} ${section.shadow} shadow-md`}>
+                            {section.icon}
+                        </div>
+                        <h3 className={`text-base font-bold tracking-tight ${section.titleColor}`}>
+                            {section.title}
+                        </h3>
                     </div>
-                    <div className="pl-1">
+
+                    {/* Section Body */}
+                    <div className="pl-3 sm:pl-11">
                         {formatText(content, section.style as any)}
                     </div>
                 </div>
             )
         })}
         
+        {/* Quick Answer / Fallback View */}
         {isQuickAnswer && (
             <div className="relative">
-                <div className="flex items-center gap-2 mb-3">
-                    <FileText className="w-5 h-5 text-slate-500" />
-                    <h3 className="font-bold text-slate-800 text-base">Summary & Insights</h3>
+                <div className="flex items-center gap-3 mb-4">
+                     <div className="flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-br from-slate-400 to-slate-500 shadow-md text-white">
+                        <FileText className="w-4 h-4" />
+                     </div>
+                    <h3 className="text-base font-bold tracking-tight text-slate-700">Summary & Insights</h3>
                 </div>
-                <div className="pl-1">
+                <div className="pl-3 sm:pl-11">
                     {formatText(parsedContent.raw || answer, 'bullet')}
                 </div>
             </div>
         )}
       </div>
       
-      <div className="bg-slate-50 px-6 py-3 border-t border-slate-100 text-xs text-slate-400 text-right flex justify-between items-center">
-         <span className="font-medium text-slate-400">Confidential Analysis</span>
-         <span>Generated by IoT-LLM Agent</span>
+      {/* Footer (更新后的文案) */}
+      <div className="mt-8 pt-4 border-t border-slate-100 flex justify-between items-center text-[11px] font-medium text-slate-400">
+         <span>Private Analysis</span>
+         <span>Generated by AIoT Intelligence</span>
       </div>
     </div>
   );
@@ -138,56 +182,41 @@ const formatText = (text: string, style: 'bullet' | 'numbered' | 'card' = 'bulle
   return lines.map((line, idx) => {
     let cleanLine = line.trim();
     
-    // 1. 移除列表符号和 Markdown 粗体标记 (如果它在行首)
-    // 这样能确保 "**2025...**" 也能被正确识别
+    // 1. 清理
     if (/^[*-]\s/.test(cleanLine) || /^\d+[\.\)]\s/.test(cleanLine)) {
         cleanLine = cleanLine.replace(/^(?:[*-]|\d+[\.\)])\s+/, '');
     }
-    // 移除行首的 Markdown 加粗符 (防止干扰日期检测)
     cleanLine = cleanLine.replace(/^\*\*/, '');
 
-    // 2. 日期标题检测 (Pure Date Header)
+    // 2. 日期标题检测
     const rawCheck = cleanLine.replace(/[*_:]/g, '').trim();
     const isDateHeader = /^\d{4}-\d{2}-\d{2}/.test(rawCheck) && rawCheck.length < 15;
 
-    // --- A. 提取【行尾】引用 (支持多个，且容忍末尾的句号/空格) ---
+    // --- A. 提取行尾引用 ---
     let rightCitations: string[] = [];
     let contentPart = cleanLine;
-
-    // 正则解释: 匹配行尾的 [xxx] 序列，允许后面跟句号(.)或空格
     const trailingPattern = /((?:\[[\d- :]+\](?:-[\[\d- :]+\])?(?:,\s*|\s+)*)+)[.\s]*$/;
     const tailMatch = cleanLine.match(trailingPattern);
 
     if (tailMatch) {
-        const rawTail = tailMatch[1]; // 捕获引用部分 (不含句号)
+        const rawTail = tailMatch[1];
         const individualCitations = rawTail.match(/\[[\d- :]+\](?:-[\[\d- :]+\])?/g);
-        if (individualCitations) {
-            rightCitations = individualCitations;
-        }
-        // 从正文中切除引用部分
+        if (individualCitations) rightCitations = individualCitations;
         contentPart = cleanLine.substring(0, tailMatch.index).trim();
-        // 如果切除后末尾有句号或逗号，根据美观度决定是否移除
-        // 这里移除它，让引用显得更干净
-        if (contentPart.endsWith('.') || contentPart.endsWith(',')) {
-            contentPart = contentPart.slice(0, -1).trim();
-        }
+        if (contentPart.endsWith('.') || contentPart.endsWith(',')) contentPart = contentPart.slice(0, -1).trim();
     }
 
-    // --- B. 提取【行首】Key (Timestamp Capsule 逻辑) ---
+    // --- B. 提取行首 Key (Timestamp Capsule) ---
     let keyPart = null;
     let isTimestampKey = false;
-
-    // 支持 YYYY-MM-DD HH:mm-HH:mm: 格式 (包含 En-dash 或 Hyphen)
-    // 同时也支持 wrap 在 Markdown 里的情况 (因为我们前面已经清理了开头的 **)
     const timestampKeyPattern = /^(\d{4}-\d{2}-\d{2}.*?\d{2}:\d{2})\**:/;
     const timestampMatch = contentPart.match(timestampKeyPattern);
 
     if (timestampMatch) {
-        keyPart = timestampMatch[1].replace(/\*\*/g, ''); // 确保 Key 里没有残留的 **
+        keyPart = timestampMatch[1].replace(/\*\*/g, '');
         contentPart = contentPart.substring(timestampMatch[0].length).trim();
         isTimestampKey = true;
     } else {
-        // 普通 Key (例如 "Note:", "CO2:")
         const generalKeyMatch = contentPart.match(/^([A-Za-z0-9 \(\)\.\-\/&,]+?):/);
         if (generalKeyMatch && generalKeyMatch[1].length < 60) {
             keyPart = generalKeyMatch[1];
@@ -199,22 +228,19 @@ const formatText = (text: string, style: 'bullet' | 'numbered' | 'card' = 'bulle
     const formattedBody = processInlineStyles(contentPart);
 
     const renderInnerContent = () => (
-        <span className="text-slate-600 leading-7">
-            {/* 1. Key 渲染 (Capsule or Bold) */}
+        <span className="text-slate-600 leading-7 text-[15px]">
+            {/* Key 渲染 (保持不变，行首时间戳依然是胶囊) */}
             {keyPart && (
                 isTimestampKey 
-                ? <span className="inline-block bg-slate-100 text-slate-700 text-xs font-bold px-2 py-0.5 rounded border border-slate-200 mr-3 align-middle mb-0.5 shadow-sm whitespace-nowrap">{keyPart}</span>
+                ? <span className="inline-block bg-slate-100 text-slate-700 text-xs font-bold px-2 py-0.5 rounded-md border border-slate-200 mr-2 align-middle mb-0.5 shadow-sm whitespace-nowrap">{keyPart}</span>
                 : <span className="font-bold text-slate-800 mr-1.5">{keyPart}:</span>
             )}
-            
-            {/* 2. 正文内容 */}
             {formattedBody}
-
-            {/* 3. 行尾引用 (多个堆叠) */}
+            {/* 引用堆叠在右侧 */}
             {rightCitations.length > 0 && (
                 <span className="float-right ml-2 flex flex-col items-end gap-1 mt-0.5">
                     {rightCitations.map((citation, cIdx) => (
-                        <span key={cIdx} className="text-xs text-slate-400 font-medium bg-slate-50 px-1.5 py-0.5 rounded border border-slate-100 select-none whitespace-nowrap">
+                        <span key={cIdx} className="text-[10px] text-slate-400 font-medium bg-slate-50 px-1.5 py-0.5 rounded border border-slate-100 select-none whitespace-nowrap">
                             {citation}
                         </span>
                     ))}
@@ -226,19 +252,19 @@ const formatText = (text: string, style: 'bullet' | 'numbered' | 'card' = 'bulle
     // Case A: 纯日期标题
     if (isDateHeader) {
         return (
-            <div key={idx} className="mt-5 mb-2 inline-block">
-                <span className="text-sm font-bold text-slate-700 bg-slate-100 px-2 py-1 rounded border border-slate-200 shadow-sm">
+            <div key={idx} className="mt-6 mb-3 inline-block">
+                <span className="text-sm font-bold text-slate-700 bg-slate-100 px-3 py-1 rounded-md border border-slate-200 shadow-sm">
                     {rawCheck}
                 </span>
             </div>
         );
     }
 
-    // Case B: 诊断卡片模式
+    // Case B: 诊断卡片模式 (Glass Style)
     if (style === 'card') {
         return (
-            <div key={idx} className="mb-3 p-3 bg-purple-50/40 rounded-lg border border-purple-100 hover:border-purple-200 transition-colors flex items-start gap-3 group">
-                 <div className="mt-1.5 w-1 h-4 bg-purple-400 rounded-full flex-shrink-0 opacity-80" />
+            <div key={idx} className="mb-3 p-4 bg-violet-50/50 rounded-xl border border-violet-100/60 hover:bg-violet-50 hover:border-violet-200 transition-all flex items-start gap-3 group/card">
+                 <div className="mt-1.5 w-1 h-4 bg-violet-400 rounded-full flex-shrink-0" />
                  <div className="w-full">
                     {renderInnerContent()}
                  </div>
@@ -250,8 +276,8 @@ const formatText = (text: string, style: 'bullet' | 'numbered' | 'card' = 'bulle
     if (style === 'numbered') {
         listCounter++;
         return (
-            <div key={idx} className="mb-2 pl-2 flex items-start gap-3 group">
-                <span className="mt-0.5 flex items-center justify-center w-5 h-5 bg-amber-100 text-amber-700 text-xs font-bold rounded-full flex-shrink-0 border border-amber-200">
+            <div key={idx} className="mb-3 pl-0 flex items-start gap-3 group">
+                <span className="mt-0.5 flex items-center justify-center w-5 h-5 bg-gradient-to-br from-amber-100 to-orange-100 text-amber-700 text-xs font-bold rounded-md flex-shrink-0 border border-amber-200/60 shadow-sm">
                     {listCounter}
                 </span>
                 <div className="w-full">
@@ -263,8 +289,8 @@ const formatText = (text: string, style: 'bullet' | 'numbered' | 'card' = 'bulle
 
     // Case D: 普通圆点列表
     return (
-        <div key={idx} className="mb-2 pl-2 flex items-start gap-3 group">
-             <span className="mt-2.5 w-1.5 h-1.5 bg-blue-400 rounded-full flex-shrink-0 opacity-80 shadow-sm" />
+        <div key={idx} className="mb-3 pl-0 flex items-start gap-3 group">
+             <span className="mt-2.5 w-1.5 h-1.5 bg-slate-400 rounded-full flex-shrink-0 opacity-60" />
              <div className="w-full">
                 {renderInnerContent()}
              </div>
@@ -273,7 +299,7 @@ const formatText = (text: string, style: 'bullet' | 'numbered' | 'card' = 'bulle
   });
 };
 
-// --- 行内样式处理器 ---
+// --- 行内样式处理器 (Critical Update: Revert pills to bold text) ---
 const processInlineStyles = (text: string) => {
     const metricsPattern = KNOWN_METRICS.join('|').replace(/\./g, '\\.'); 
 
@@ -281,7 +307,6 @@ const processInlineStyles = (text: string) => {
         `(\\*\\*.*?\\*\\*)|` +                         
         `\\b(${metricsPattern})(?:\\b|(?=[^a-zA-Z0-9]))|` + 
         `(CO₂)|` +
-        // 数值高亮: 增加对 ≈, ~, > 等符号的支持
         `((?:≈|~|>=?|<=?|approx\\s)?\\d+(?:[\\-–]\\d+)?(?:\\.\\d+)?\\s?(?:ppm|µg\\/m³|lux|%|°C|C)?)|` +
         `\\b((?:median|mean|peak|min|max|score|val)\\s+\\d+(?:\\.\\d+)?)`, 
         'gi'
@@ -290,18 +315,17 @@ const processInlineStyles = (text: string) => {
     const parts = text.split(regex).filter(p => p !== undefined && p !== "");
 
     return parts.map((part, i) => {
-        // 1. Markdown Bold
         if (part.startsWith('**') && part.endsWith('**')) {
             return <span key={i} className="font-bold text-slate-900">{part.slice(2, -2)}</span>;
         }
 
-        // 2. Metrics (自动转换 CO2 -> CO₂)
+        // Metrics: 深色加粗
         if (KNOWN_METRICS.some(m => m.toLowerCase() === part.toLowerCase()) || part === 'CO₂') {
             const display = part === 'CO2' ? <span>CO<sub>2</sub></span> : part;
             return <span key={i} className="font-bold text-slate-800">{display}</span>;
         }
         
-        // 3. Values Highlighting
+        // Values Highlighting (核心修改：从胶囊样式回归到单纯的加粗文本)
         const isValue = /\d/.test(part) && (
             part.includes('ppm') || part.includes('µg') || part.includes('%') || part.includes('°C') || part.includes('lux') ||
             part.includes('≈') || part.includes('~') || 
@@ -309,13 +333,14 @@ const processInlineStyles = (text: string) => {
         );
 
         if (isValue) {
-             return <span key={i} className="font-semibold text-slate-800">{part}</span>;
+             // ✅ 回归 Screenshot 1 的风格：仅加粗，无背景，无边框
+             return <span key={i} className="font-bold text-slate-900">{part}</span>;
         }
         
-        // 4. Stat phrases (e.g., "median 66")
+        // Stats phrases
         if (/^(median|mean|peak|min|max|score|val)\s+\d+/.test(part.toLowerCase())) {
             const [stat, val] = part.split(/\s+/);
-            return <span key={i}>{stat} <span className="font-semibold text-slate-800">{val}</span></span>;
+            return <span key={i}>{stat} <span className="font-bold text-slate-900">{val}</span></span>;
         }
 
         return <span key={i}>{part}</span>;
