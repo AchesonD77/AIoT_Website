@@ -7,7 +7,7 @@ export default defineConfig(({ mode }) => {
 
   return {
      // 👇 核心修改：开发环境用 /，生产环境用 /AIOT_Web/
-    base: mode === 'production' ? '/AIOT_Web/' : '/',
+    base: mode === 'production' ? '/AIoT_Website/' : '/',
 
     server: {
       port: 3000,
