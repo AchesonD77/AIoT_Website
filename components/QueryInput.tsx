@@ -102,6 +102,7 @@ export const QueryInput: React.FC<QueryInputProps> = ({
 }) => {
   const [randomSuggestions, setRandomSuggestions] = useState<Suggestion[]>([]);
   const [isSpinning, setIsSpinning] = useState(false);
+  const [isHoveringButton, setIsHoveringButton] = useState(false);
 
   const refreshSuggestions = () => {
     setIsSpinning(true);
@@ -132,42 +133,109 @@ export const QueryInput: React.FC<QueryInputProps> = ({
 
   return (
     <div className="w-full relative z-30">
-      {/* 注入呼吸动画样式 */}
+      {/* 注入 CSS 动画 */}
       <style>{`
-        @keyframes breathe {
-          0% { transform: scale(1); }
-          50% { transform: scale(1.1); }
-          100% { transform: scale(1); }
+        /* 定义统一的呼吸节奏变量 
+           时间统一为 3s，曲线统一为 ease-in-out
+        */
+        
+        /* 定义截图中的亮蓝色变量: Tech Blue / Azure 
+           #3B82F6 是 Tailwind 的 blue-500，接近截图按钮颜色
+        */
+        
+        /* 1. Try Asking 文字呼吸：灰色 -> 亮蓝色 -> 灰色 */
+        @keyframes breathe-text {
+          0%, 100% { 
+            transform: scale(1); 
+            opacity: 0.9; 
+            color: #64748b; /* slate-500 (灰色) */
+          }
+          50% { 
+            transform: scale(1.1); /* 放大 */
+            opacity: 1; 
+            color: #3B82F6; /* Tech Blue (高光时刻) */
+          }
         }
-        .hover-breathe:hover {
-          animation: breathe 2s infinite ease-in-out;
+        
+        /* 2. 搜索框容器呼吸：边框/阴影同步变蓝 */
+        @keyframes breathe-input {
+          0%, 100% {
+            transform: scale(1);
+            border-color: #334155; /* slate-700 */
+            box-shadow: 0 0 0 0 transparent;
+          }
+          50% {
+            transform: scale(1.02); 
+            border-color: rgba(59, 130, 246, 0.5); /* blue-500 with opacity */
+            box-shadow: 0 15px 40px -10px rgba(37, 99, 235, 0.3); /* blue shadow */
+          }
+        }
+
+        /* 3. 输入框内部文字呼吸：白色 -> 亮蓝色 -> 白色 (反转回来) */
+        /* 平时白色，呼吸最强时变成蓝色，与外框光晕和TryAsking呼应 */
+        @keyframes breathe-input-text {
+          0%, 100% {
+            color: #ffffff; /* 纯白 (常态) */
+            transform: scale(1);
+          }
+          50% {
+            color: #3B82F6; /* Tech Blue (高光时刻) */
+            transform: scale(1.005);
+          }
+        }
+
+        /* 应用动画类：同频共振 (3s, ease-in-out) */
+        .animate-sync-text {
+          animation: breathe-text 3s infinite ease-in-out;
+        }
+        
+        .animate-sync-text svg {
+          color: currentColor; 
+        }
+        
+        .animate-sync-input {
+          animation: breathe-input 3s infinite ease-in-out;
+        }
+
+        .animate-sync-input-text {
+          animation: breathe-input-text 3s infinite ease-in-out;
         }
       `}</style>
 
       <form onSubmit={handleSubmit} className="relative group">
         
-        {/* Glow effect */}
-        <div className="absolute -inset-1 bg-gradient-to-r from-polimi-600 to-indigo-600 rounded-full blur opacity-20 group-hover:opacity-50 transition duration-700 group-hover:scale-[1.02]"></div>
+        {/* Glow effect (Background) - Updated to Blue/Indigo gradient */}
+        <div className="absolute -inset-1 bg-gradient-to-r from-blue-600 to-indigo-600 rounded-full blur opacity-20 group-hover:opacity-50 transition duration-700 group-hover:scale-[1.02]"></div>
         
         {/* Main Input Container */}
         <div className="relative flex items-center bg-slate-800 rounded-full overflow-hidden p-2 border border-slate-700 
                         shadow-2xl
                         transition-all duration-500 ease-out
-                        focus-within:ring-2 focus-within:ring-polimi-500/50 focus-within:scale-[1.02]
-                        hover:scale-[1.02]
-                        hover:border-polimi-500/50
-                        hover:shadow-[0_15px_40px_-10px_rgba(124,58,237,0.3)]">
+                        animate-sync-input
+                        focus-within:ring-2 focus-within:ring-blue-500/50">
           
           <input
             type="text"
             value={value}
             onChange={(e) => onChange(e.target.value)}
             placeholder="Just ask, unlock insights instantly"
-            className="flex-grow bg-transparent text-white placeholder-slate-400 px-6 py-4 text-base sm:text-lg focus:outline-none"
+            className="flex-grow bg-transparent placeholder-slate-400 px-6 py-4 text-base sm:text-lg focus:outline-none animate-sync-input-text"
             disabled={isLoading}
           />
           
-          {/* Clear Button */}
+          {/* Input Clear Button (Shows when typing, BEFORE searching) */}
+          {value && !hasResults && !isLoading && (
+            <button
+              type="button"
+              onClick={() => onChange('')}
+              className="flex-shrink-0 flex items-center justify-center w-10 h-10 rounded-full text-slate-400 hover:text-white hover:bg-slate-700/50 transition-colors mr-1"
+              title="Clear input"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          )}
+
+          {/* Result Clear Button (Shows when has results) */}
           {hasResults && (
             <button
               type="button"
@@ -183,11 +251,13 @@ export const QueryInput: React.FC<QueryInputProps> = ({
           <button
             type="submit"
             disabled={isLoading || !value.trim()}
+            onMouseEnter={() => setIsHoveringButton(true)}
+            onMouseLeave={() => setIsHoveringButton(false)}
             className={`
               flex-shrink-0 flex items-center justify-center w-12 h-12 rounded-full transition-all duration-300 ml-2
               ${isLoading || !value.trim() 
                 ? 'bg-slate-700 text-slate-500 cursor-not-allowed' 
-                : 'bg-polimi-500 text-white hover:bg-polimi-400 shadow-lg transform hover:scale-110 active:scale-95'}
+                : 'bg-blue-500 text-white hover:bg-blue-400 shadow-lg transform hover:scale-110 active:scale-95'}
             `}
           >
             {isLoading ? (
@@ -197,25 +267,41 @@ export const QueryInput: React.FC<QueryInputProps> = ({
             )}
           </button>
         </div>
+
+        {/* Input Text Tooltip (Apple Glass Style) */}
+        {value && (
+          <div className={`
+                absolute top-full left-0 mt-4 w-full p-4 
+                bg-white/70 backdrop-blur-xl border border-white/40
+                text-slate-800 text-sm rounded-xl shadow-2xl
+                opacity-0 invisible 
+                transition-all duration-200 delay-100 z-50 pointer-events-none origin-top
+                ${!isHoveringButton ? 'group-hover:opacity-100 group-hover:visible' : ''} 
+          `}>
+             <div className="absolute bottom-full left-10 -mb-px border-8 border-transparent border-b-white/50 blur-[0.5px]"></div>
+             <div className="leading-relaxed font-medium break-words">
+               {value}
+             </div>
+          </div>
+        )}
       </form>
       
       {/* Suggestions Section */}
       {!hideSuggestions && (
         <div className="mt-4 flex flex-wrap justify-center sm:justify-start gap-2 text-sm pl-4 transition-all duration-500">
           
-          {/* Try Asking Button - Modified with Breathing Effect */}
+          {/* Try Asking Button */}
           <button 
             type="button"
             onClick={refreshSuggestions}
-            className="text-slate-500 flex items-center gap-1.5 font-medium 
-                       transition-colors cursor-pointer group select-none focus:outline-none
-                       hover-breathe active:scale-95 hover:text-polimi-500"
+            className="flex items-center gap-1.5 font-medium 
+                       transition-colors cursor-pointer select-none focus:outline-none
+                       animate-sync-text hover:text-blue-500"
             title="Click to get fresh suggestions"
           >
             <Sparkles 
               className={`w-3.5 h-3.5 transition-transform duration-500 
-                ${isSpinning ? 'rotate-180' : 'group-hover:rotate-12'}
-                text-polimi-400
+                ${isSpinning ? 'rotate-180' : ''}
               `} 
             /> 
             <span>Try asking:</span>
@@ -223,19 +309,31 @@ export const QueryInput: React.FC<QueryInputProps> = ({
           
           {/* Suggestion Chips */}
           {randomSuggestions.map((item, idx) => (
-             <button 
-               key={idx}
-               onClick={() => onChange(item.question)} 
-               className="px-3 py-1 bg-white/50 backdrop-blur-sm border border-slate-200 rounded-full text-slate-700 
-                          hover:border-polimi-500 hover:text-polimi-700 hover:bg-white/80
-                          transition-all duration-300 
-                          text-left max-w-full truncate animate-fade-in 
-                          hover:scale-105 active:scale-95 transform"
-               title={item.question}
-               style={{ animationDelay: `${idx * 100}ms` }}
-             >
-               {item.label}
-             </button>
+             <div key={idx} className="relative group">
+               <button 
+                 onClick={() => onChange(item.question)} 
+                 className="px-3 py-1 bg-white/50 backdrop-blur-sm border border-slate-200 rounded-full text-slate-700 
+                            hover:border-blue-500 hover:text-blue-600 hover:bg-white/80
+                            transition-all duration-300 
+                            text-left max-w-full truncate animate-fade-in 
+                            hover:scale-[1.02] active:scale-95 transform"
+                 style={{ animationDelay: `${idx * 100}ms` }}
+               >
+                 {item.label}
+               </button>
+               
+               {/* Custom Fast Tooltip */}
+               <div className="absolute top-full left-0 mt-2 w-72 p-4 
+                               bg-white/70 backdrop-blur-xl border border-white/40
+                               text-slate-800 text-xs rounded-xl shadow-2xl
+                               opacity-0 invisible group-hover:opacity-100 group-hover:visible 
+                               transition-all duration-200 delay-100 z-50 pointer-events-none origin-top">
+                  <div className="absolute bottom-full left-4 -mb-px border-8 border-transparent border-b-white/50 blur-[0.5px]"></div>
+                  <div className="leading-relaxed font-medium">
+                    {item.question}
+                  </div>
+               </div>
+             </div>
           ))}
         </div>
       )}

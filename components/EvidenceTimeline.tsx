@@ -154,7 +154,7 @@ export const EvidenceTimeline: React.FC<EvidenceTimelineProps> = ({ answer }) =>
                     shadow-[0_20px_40px_-12px_rgba(0,0,0,0.08)] 
                     ring-1 ring-black/5 
                     transition-all duration-500 ease-out
-                    hover:scale-[1.02] 
+                    hover:scale-[1.03] 
                     hover:shadow-[0_30px_80px_-12px_rgba(124,58,237,0.25)]
                     hover:ring-1 hover:ring-violet-500/20">
       
