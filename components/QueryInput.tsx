@@ -132,18 +132,24 @@ export const QueryInput: React.FC<QueryInputProps> = ({
 
   return (
     <div className="w-full relative z-30">
+      {/* 注入呼吸动画样式 */}
+      <style>{`
+        @keyframes breathe {
+          0% { transform: scale(1); }
+          50% { transform: scale(1.1); }
+          100% { transform: scale(1); }
+        }
+        .hover-breathe:hover {
+          animation: breathe 2s infinite ease-in-out;
+        }
+      `}</style>
+
       <form onSubmit={handleSubmit} className="relative group">
         
-        {/* Glow effect (Background) - 保持原来的光晕，但也让它稍微动一下 */}
+        {/* Glow effect */}
         <div className="absolute -inset-1 bg-gradient-to-r from-polimi-600 to-indigo-600 rounded-full blur opacity-20 group-hover:opacity-50 transition duration-700 group-hover:scale-[1.02]"></div>
         
-        {/* Main Input Container - Dark Pill Shape */}
-        {/* ✅ 修改点：
-            1. transition-all duration-500 ease-out: 丝滑动画基础
-            2. hover:scale-[1.02]: 鼠标悬停放大 1.02 倍
-            3. hover:shadow-[...]: 悬浮时增加带有紫色调的高级阴影
-            4. hover:border-polimi-500/50: 悬浮时边框微亮
-        */}
+        {/* Main Input Container */}
         <div className="relative flex items-center bg-slate-800 rounded-full overflow-hidden p-2 border border-slate-700 
                         shadow-2xl
                         transition-all duration-500 ease-out
@@ -161,7 +167,7 @@ export const QueryInput: React.FC<QueryInputProps> = ({
             disabled={isLoading}
           />
           
-          {/* Clear / Back Button */}
+          {/* Clear Button */}
           {hasResults && (
             <button
               type="button"
@@ -173,6 +179,7 @@ export const QueryInput: React.FC<QueryInputProps> = ({
             </button>
           )}
           
+          {/* Search Button */}
           <button
             type="submit"
             disabled={isLoading || !value.trim()}
@@ -192,24 +199,38 @@ export const QueryInput: React.FC<QueryInputProps> = ({
         </div>
       </form>
       
-      {/* Suggestions */}
+      {/* Suggestions Section */}
       {!hideSuggestions && (
         <div className="mt-4 flex flex-wrap justify-center sm:justify-start gap-2 text-sm pl-4 transition-all duration-500">
+          
+          {/* Try Asking Button - Modified with Breathing Effect */}
           <button 
             type="button"
             onClick={refreshSuggestions}
-            className="text-slate-500 flex items-center gap-1.5 font-medium hover:text-polimi-600 transition-colors cursor-pointer group select-none focus:outline-none"
+            className="text-slate-500 flex items-center gap-1.5 font-medium 
+                       transition-colors cursor-pointer group select-none focus:outline-none
+                       hover-breathe active:scale-95 hover:text-polimi-500"
             title="Click to get fresh suggestions"
           >
-            <Sparkles className={`w-3.5 h-3.5 transition-transform duration-500 ${isSpinning ? 'rotate-180' : 'group-hover:rotate-12'}`} /> 
+            <Sparkles 
+              className={`w-3.5 h-3.5 transition-transform duration-500 
+                ${isSpinning ? 'rotate-180' : 'group-hover:rotate-12'}
+                text-polimi-400
+              `} 
+            /> 
             <span>Try asking:</span>
           </button>
           
+          {/* Suggestion Chips */}
           {randomSuggestions.map((item, idx) => (
              <button 
                key={idx}
                onClick={() => onChange(item.question)} 
-               className="px-3 py-1 bg-white/50 backdrop-blur-sm border border-slate-200 rounded-full text-slate-700 hover:border-polimi-500 hover:text-polimi-700 transition-colors text-left max-w-full truncate animate-fade-in hover:scale-105 transform duration-200"
+               className="px-3 py-1 bg-white/50 backdrop-blur-sm border border-slate-200 rounded-full text-slate-700 
+                          hover:border-polimi-500 hover:text-polimi-700 hover:bg-white/80
+                          transition-all duration-300 
+                          text-left max-w-full truncate animate-fade-in 
+                          hover:scale-105 active:scale-95 transform"
                title={item.question}
                style={{ animationDelay: `${idx * 100}ms` }}
              >
