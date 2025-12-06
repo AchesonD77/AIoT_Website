@@ -105,14 +105,18 @@ const App: React.FC = () => {
 
   return (
     <div className="min-h-screen flex flex-col bg-slate-50 text-slate-900 font-sans">
-      <Header onReset={handleReset} />
+      {/* 👇 在这里修改，添加外层 div 和 z-[100] */}
+      <div className="relative z-[100]">
+        <Header onReset={handleReset} />
+      </div>
 
       {/* Added 'relative' to allow absolute positioning of the Results section during exit */}
       <main className="flex-grow flex flex-col relative">
         {/* Hero Section */}
+        {/* ✅ 修改点: 移除 overflow-hidden 并添加 z-50，确保 Tooltip 可以显示在容器外部且层级最高 */}
         <div
           className={`
-          relative w-full border-b border-slate-200 overflow-hidden flex flex-col items-center justify-center 
+          relative w-full border-b border-slate-200 flex flex-col items-center justify-center z-50
           transition-all duration-700 ease-in-out transform-gpu will-change-[min-height,padding]
           ${isResultsLayout ? 'min-h-[140px] pt-24 pb-6 bg-slate-50 flex-none' : 'min-h-[600px] flex-grow'}
         `}

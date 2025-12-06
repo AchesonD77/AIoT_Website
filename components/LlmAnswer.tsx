@@ -93,7 +93,7 @@ export const LlmAnswer: React.FC<LlmAnswerProps> = ({ answer }) => {
                     ring-1 ring-black/5 
                     backdrop-blur-xl 
                     transition-all duration-500 ease-out
-                    hover:scale-[1.0115]
+                    hover:scale-[1.0055]
                     hover:shadow-[0_30px_60px_-15px_rgba(124,58,237,0.3)]
                     hover:ring-violet-500/30">
       
