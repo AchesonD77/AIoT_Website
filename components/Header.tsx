@@ -1,18 +1,25 @@
 import React from 'react';
-import { Network, Search, Menu } from 'lucide-react';
+import { Search, Download, Menu } from 'lucide-react';
 
 interface HeaderProps {
   onReset?: () => void;
+  onCapture?: () => void;
+  canCapture?: boolean;
+  isCapturing?: boolean;
 }
 
-export const Header: React.FC<HeaderProps> = ({ onReset }) => {
+export const Header: React.FC<HeaderProps> = ({ 
+  onReset, 
+  onCapture, 
+  canCapture = false,
+  isCapturing = false
+}) => {
   return (
     <header className="fixed w-full top-0 z-50 transition-all duration-300 bg-white/80 backdrop-blur-md border-b border-slate-200/50 shadow-sm">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-20">
           
-          
-        {/* Logo Section - Modified to be clickable 上方部分*/}
+          {/* Logo Section - Modified to be clickable */}
           <div 
             className="flex items-center gap-4 cursor-pointer group" 
             onClick={onReset}
@@ -32,13 +39,29 @@ export const Header: React.FC<HeaderProps> = ({ onReset }) => {
 
           {/* Nav Icons */}
           <div className="flex items-center gap-6 text-slate-600">
-            <button className="hover:text-polimi-900 transition-colors p-2 rounded-full hover:bg-slate-100/50">
+            <button className="hover:text-polimi-900 transition-colors p-2 rounded-full hover:bg-slate-100/50" title="Search History">
                 <Search className="w-5 h-5" />
             </button>
-            <button className="hover:text-polimi-900 transition-colors p-2 rounded-full hover:bg-slate-100/50">
-                <Network className="w-5 h-5" />
+            
+            {/* Download/Capture Button (Replaces Network) */}
+             <button 
+                onClick={onCapture}
+                disabled={!canCapture || isCapturing}
+                className={`
+                    p-2 rounded-full transition-all duration-300
+                    ${!canCapture 
+                        ? 'opacity-30 cursor-not-allowed text-slate-400' 
+                        : 'hover:bg-indigo-50 hover:text-indigo-600 cursor-pointer text-slate-600 hover:scale-110 active:scale-95'
+                    }
+                    ${isCapturing ? 'animate-pulse text-indigo-500' : ''}
+                `}
+                title={canCapture ? "Download Analysis Report (PDF)" : "No content to download"}
+             >
+                <Download className="w-5 h-5" />
             </button>
-             <button className="hover:text-polimi-900 transition-colors p-2 rounded-full hover:bg-slate-100/50">
+
+            {/* Menu Button */}
+            <button className="hover:text-polimi-900 transition-colors p-2 rounded-full hover:bg-slate-100/50" title="Menu">
                 <Menu className="w-5 h-5" />
             </button>
           </div>

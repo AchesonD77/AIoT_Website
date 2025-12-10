@@ -85,8 +85,10 @@ const formatDirectAnswer = (text: string) => {
 
     const regex = new RegExp(
         // A. Section Headers (通用小标题识别)
-        // Update: [a-zA-Z0-9\s\-]+ 允许包含数字和连字符，适配日期格式 "2025-07-13"
-        `((?:^|\\n)\\s*-\\s*[a-zA-Z0-9\\s\\-]+:)` + `|` +
+        // 关键修复：添加 (?!\\d) 
+        // 含义：匹配冒号，但冒号后面【不能】紧跟着数字。
+        // 这避免了将 "at 01:00" 中的 "at 01:" 误判为标题。
+        `((?:^|\\n)\\s*-\\s*[a-zA-Z0-9\\s\\-]+:(?!\\d))` + `|` +
 
         // B. Markdown Bold
         `(\\*\\*.*?\\*\\*)|` +                         
@@ -105,8 +107,8 @@ const formatDirectAnswer = (text: string) => {
 
     return parts.map((part, i) => {
         // A. Section Header Logic
-        // Update: 同步更新验证逻辑，支持数字和连字符
-        if (/^\s*(\n)?\s*-\s*[a-zA-Z0-9\s\-]+:$/.test(part)) {
+        // 同步更新判断：只有符合正则且不以数字结尾（其实已经在split中过滤了，这里双重保险）的才算标题
+        if (/^\s*(\n)?\s*-\s*[a-zA-Z0-9\s\-]+:(?!\d)$/.test(part)) {
             const label = part.replace(/^\n/, '').trim();
             // 保持紧凑优化：mt-2 mb-0.5
             return (

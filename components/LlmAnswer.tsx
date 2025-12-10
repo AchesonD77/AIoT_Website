@@ -63,7 +63,11 @@ export const LlmAnswer: React.FC<LlmAnswerProps> = ({ answer }) => {
   const parsedContent = useMemo(() => {
     if (!answer) return {};
 
-    const sectionPattern = /(?:^|\n)(?:#{1,6}|\*\*|\d+[\.\)]|-)?\s*(Findings|Observations|Alarms|Anomalies|Diagnostics|Cause|Recommendations|Actions)(?:.*?)[:\n]/gi;
+    // UPDATED: 正则优化
+    // 原来的正则会因为时间中的冒号 (08:00) 而错误截断标题。
+    // 修改为 (?::(?!\d)|$|\n) -> 只有当冒号后面不是数字时，才视为标题结束符。
+    const sectionPattern = /(?:^|\n)(?:#{1,6}|\*\*|\d+[\.\)]|-)?\s*(Findings|Observations|Alarms|Anomalies|Diagnostics|Cause|Recommendations|Actions)(?:.*?)(?::(?!\d)|$|\n)/gi;
+    
     const matches = Array.from(answer.matchAll(sectionPattern));
     
     if (matches.length === 0) return { raw: answer };
@@ -192,13 +196,24 @@ const formatText = (text: string, style: 'bullet' | 'numbered' | 'card' = 'bulle
 
     // --- A. 提取引用 ---
     let rightCitations: string[] = [];
-    const allCitationsPattern = /\[\d{4}-\d{2}-\d{2}.*?\]/g;
+    
+    // UPDATED: 优先匹配 "[时间1]-[时间2]" 格式的连续区间，避免被拆分为两个独立时间点
+    // (?: ... ) 是非捕获组，用于逻辑或：优先匹配区间，匹配不到再匹配单个
+    const allCitationsPattern = /(?:\[\d{4}-\d{2}-\d{2}.*?\]\s*[-–]\s*\[\d{4}-\d{2}-\d{2}.*?\]|\[\d{4}-\d{2}-\d{2}.*?\])/g;
+    
     const foundCitations = cleanLine.match(allCitationsPattern);
     
     if (foundCitations) {
         rightCitations = foundCitations;
+        // 移除引用标签
         cleanLine = cleanLine.replace(allCitationsPattern, '');
-        cleanLine = cleanLine.replace(/\s+,\s+/g, ', ').replace(/,\s*$/, '').trim();
+        
+        // UPDATED: 清理残留的标点符号
+        cleanLine = cleanLine
+            .replace(/(?:\s*,\s*)+/g, ', ')  // 合并重复逗号
+            .replace(/,\s*\./g, '.')        // 修复句号前的逗号
+            .replace(/,\s*$/, '')           // 移除行尾悬挂的逗号
+            .trim();
     }
 
     let contentPart = cleanLine;
@@ -208,7 +223,6 @@ const formatText = (text: string, style: 'bullet' | 'numbered' | 'card' = 'bulle
     let isTimestampKey = false;
     
     // 1. 优先检测：标准日期时间格式出现在行首 (e.g. "2025-07-11 12:00 ...")
-    // 不需要后面强制跟冒号，只要符合日期格式即可作为 Key 提取，并自动截断后续分隔符
     const strictDateMatch = contentPart.match(/^(\d{4}-\d{2}-\d{2}\s+\d{1,2}:\d{2})(?:\s*[:：]\s*|\s+|$)/);
 
     if (strictDateMatch) {
@@ -242,10 +256,9 @@ const formatText = (text: string, style: 'bullet' | 'numbered' | 'card' = 'bulle
     const renderCitations = () => {
         if (rightCitations.length === 0) return null;
 
-        // 通用胶囊样式
         const capsuleStyle = "cursor-default flex items-center gap-1.5 text-[11px] font-bold text-slate-600 bg-white px-2.5 py-1 rounded-full border border-slate-200 shadow-sm transition-all hover:border-violet-300 hover:text-violet-600 hover:shadow-md";
 
-        // 模式 1: 单个引用 -> 直接显示为"单胶囊"
+        // 模式 1: 单个引用（包含连续区间 [A]-[B]） -> 直接显示
         if (rightCitations.length === 1) {
             const cleanText = rightCitations[0].replace(/[\[\]]/g, '');
             return (
@@ -258,15 +271,13 @@ const formatText = (text: string, style: 'bullet' | 'numbered' | 'card' = 'bulle
             );
         }
 
-        // 模式 2: 引用数量 >= 2 -> 强制折叠
+        // 模式 2: 多个引用 -> 折叠
         const firstText = rightCitations[0].replace(/[\[\]]/g, ''); 
         const dateMatch = firstText.match(/\d{4}-\d{2}-\d{2}/);
         const displayDate = dateMatch ? dateMatch[0] : "Time Records";
 
         return (
-            // hover:z-[100] 确保悬浮时层级最高
             <span className="float-right ml-3 mt-0.5 opacity-0 group-hover:opacity-100 transition-opacity duration-300 relative group/popover z-20 hover:z-[100]">
-                {/* 1. 折叠状态：日期胶囊 */}
                 <span className={`${capsuleStyle} cursor-help`}>
                     <Clock className="w-3 h-3" />
                     {displayDate}
@@ -275,7 +286,6 @@ const formatText = (text: string, style: 'bullet' | 'numbered' | 'card' = 'bulle
                     </span>
                 </span>
 
-                {/* 2. 展开状态：完整列表 (Pop-up) */}
                 <span className="absolute right-0 top-full mt-2 flex flex-col items-end gap-1 min-w-[180px]
                                  opacity-0 translate-y-2 pointer-events-none 
                                  group-hover/popover:opacity-100 group-hover/popover:translate-y-0 group-hover/popover:pointer-events-auto
@@ -300,14 +310,12 @@ const formatText = (text: string, style: 'bullet' | 'numbered' | 'card' = 'bulle
         <span className="text-slate-600 leading-snug text-[15px]">
             {keyPart && (
                 isTimestampKey 
-                // UPDATED: 使用更醒目的胶囊样式 (符合 Screenshot 2 风格)
                 ? <span className="inline-block bg-slate-100 text-slate-800 text-[13px] font-bold px-2.5 py-1 rounded-md border border-slate-200 mr-2 align-middle shadow-sm whitespace-nowrap">{keyPart}</span>
                 : <span className="font-bold text-slate-800 mr-1.5">{keyPart}:</span>
             )}
             
             {formattedBody}
 
-            {/* 引用区 */}
             {renderCitations()}
         </span>
     );
@@ -322,7 +330,6 @@ const formatText = (text: string, style: 'bullet' | 'numbered' | 'card' = 'bulle
         );
     }
 
-    // Case B: 诊断卡片
     if (style === 'card') {
         return (
             <div key={idx} className="mb-3 p-4 bg-violet-50/50 rounded-xl border border-violet-100/60 hover:bg-violet-50 hover:border-violet-200 transition-all flex items-start gap-3 group">
@@ -334,7 +341,6 @@ const formatText = (text: string, style: 'bullet' | 'numbered' | 'card' = 'bulle
         );
     }
 
-    // Case C: 数字列表
     if (style === 'numbered') {
         listCounter++;
         return (
@@ -349,7 +355,6 @@ const formatText = (text: string, style: 'bullet' | 'numbered' | 'card' = 'bulle
         );
     }
 
-    // Case D: 普通圆点
     return (
         <div key={idx} className="mb-3 pl-0 flex items-start gap-3 group">
              <span className="mt-2.5 w-1.5 h-1.5 bg-slate-400 rounded-full flex-shrink-0 opacity-60" />
@@ -367,7 +372,6 @@ const processInlineStyles = (text: string) => {
 
     const regex = new RegExp(
         `(\\*\\*.*?\\*\\*)|` + 
-        // 优先匹配完整日期格式 "YYYY-MM-DD HH:mm"
         `(\\b\\d{4}-\\d{2}-\\d{2}\\s+\\d{1,2}:\\d{2}\\b)|` +      
         `(\\b\\d{1,2}:\\d{2}\\b)|` +                    
         `\\b(${metricsPattern})(?:\\b|(?=[^a-zA-Z0-9]))|` + 
@@ -384,7 +388,6 @@ const processInlineStyles = (text: string) => {
             return <span key={i} className="font-bold text-slate-900">{part.slice(2, -2)}</span>;
         }
 
-        // NEW: 完整日期格式渲染为胶囊样式 (类似截图2)
         if (/^\d{4}-\d{2}-\d{2}\s+\d{1,2}:\d{2}$/.test(part)) {
              return (
                  <span key={i} className="inline-block mx-1.5 bg-slate-100 text-slate-800 text-[13px] font-bold px-2.5 py-1 rounded-md border border-slate-200 align-middle shadow-sm">
@@ -393,7 +396,6 @@ const processInlineStyles = (text: string) => {
              );
         }
 
-        // 纯时间 (加粗)
         if (/^\d{1,2}:\\d{2}$/.test(part)) {
              return <span key={i} className="font-bold text-slate-800">{part}</span>;
         }
