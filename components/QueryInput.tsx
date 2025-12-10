@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { ArrowRight, Sparkles, X } from 'lucide-react';
+// 引入获取索引信息的函数和类型
+import { fetchIndexInfo, IndexInfo } from '../services/apiService';
 
 interface QueryInputProps {
   value: string;
@@ -103,6 +105,19 @@ export const QueryInput: React.FC<QueryInputProps> = ({
   const [randomSuggestions, setRandomSuggestions] = useState<Suggestion[]>([]);
   const [isSpinning, setIsSpinning] = useState(false);
   const [isHoveringButton, setIsHoveringButton] = useState(false);
+
+  // 👇 新增代码开始：定义索引信息状态
+  const [indexInfo, setIndexInfo] = useState<IndexInfo | null>(null);
+
+  // 👇 新增代码开始：组件加载时获取后端索引信息
+  useEffect(() => {
+    const loadIndexInfo = async () => {
+      const data = await fetchIndexInfo();
+      setIndexInfo(data);
+    };
+    loadIndexInfo();
+  }, []);
+  // 👆 新增代码结束
 
   const refreshSuggestions = () => {
     setIsSpinning(true);
@@ -286,56 +301,107 @@ export const QueryInput: React.FC<QueryInputProps> = ({
         )}
       </form>
       
-      {/* Suggestions Section */}
+{/* Suggestions Section */}
       {!hideSuggestions && (
-        <div className="mt-4 flex flex-wrap justify-center sm:justify-start gap-2 text-sm pl-4 transition-all duration-500">
-          
-          {/* Try Asking Button */}
-          <button 
-            type="button"
-            onClick={refreshSuggestions}
-            className="flex items-center gap-1.5 font-medium 
-                       transition-colors cursor-pointer select-none focus:outline-none
-                       animate-sync-text hover:text-blue-500"
-            title="Click to get fresh suggestions"
-          >
-            <Sparkles 
-              className={`w-3.5 h-3.5 transition-transform duration-500 
-                ${isSpinning ? 'rotate-180' : ''}
-              `} 
-            /> 
-            <span>Try asking:</span>
-          </button>
-          
-          {/* Suggestion Chips */}
-          {randomSuggestions.map((item, idx) => (
-             <div key={idx} className="relative group">
-               <button 
-                 onClick={() => onChange(item.question)} 
-                 className="px-3 py-1 bg-white/50 backdrop-blur-sm border border-slate-200 rounded-full text-slate-700 
-                            hover:border-blue-500 hover:text-blue-600 hover:bg-white/80
-                            transition-all duration-300 
-                            text-left max-w-full truncate animate-fade-in 
-                            hover:scale-[1.02] active:scale-95 transform"
-                 style={{ animationDelay: `${idx * 100}ms` }}
-               >
-                 {item.label}
-               </button>
-               
-               {/* Custom Fast Tooltip */}
-               <div className="absolute top-full left-0 mt-2 w-72 p-4 
-                               bg-white/70 backdrop-blur-xl border border-white/40
-                               text-slate-800 text-xs rounded-xl shadow-2xl
-                               opacity-0 invisible group-hover:opacity-100 group-hover:visible 
-                               transition-all duration-200 delay-100 z-50 pointer-events-none origin-top">
-                  <div className="absolute bottom-full left-4 -mb-px border-8 border-transparent border-b-white/50 blur-[0.5px]"></div>
-                  <div className="leading-relaxed font-medium">
-                    {item.question}
-                  </div>
+        <>
+          {/* 原有的 Suggestion 区域 (保持不变) */}
+          <div className="mt-4 flex flex-wrap justify-center sm:justify-start gap-2 text-sm pl-4 transition-all duration-500">
+            {/* Try Asking Button */}
+            <button 
+              type="button"
+              onClick={refreshSuggestions}
+              className="flex items-center gap-1.5 font-medium 
+                         transition-colors cursor-pointer select-none focus:outline-none
+                         animate-sync-text hover:text-blue-500"
+              title="Click to get fresh suggestions"
+            >
+              <Sparkles 
+                className={`w-3.5 h-3.5 transition-transform duration-500 
+                  ${isSpinning ? 'rotate-180' : ''}
+                `} 
+              /> 
+              <span>Try asking:</span>
+            </button>
+            
+            {/* Suggestion Chips */}
+            {randomSuggestions.map((item, idx) => (
+               <div key={idx} className="relative group">
+                 <button 
+                   onClick={() => onChange(item.question)} 
+                   className="px-3 py-1 bg-white/50 backdrop-blur-sm border border-slate-200 rounded-full text-slate-700 
+                              hover:border-blue-500 hover:text-blue-600 hover:bg-white/80
+                              transition-all duration-300 
+                              text-left max-w-full truncate animate-fade-in 
+                              hover:scale-[1.02] active:scale-95 transform"
+                   style={{ animationDelay: `${idx * 100}ms` }}
+                 >
+                   {item.label}
+                 </button>
+                 
+                 {/* Custom Fast Tooltip */}
+                 <div className="absolute top-full left-0 mt-2 w-72 p-4 
+                                 bg-white/70 backdrop-blur-xl border border-white/40
+                                 text-slate-800 text-xs rounded-xl shadow-2xl
+                                 opacity-0 invisible group-hover:opacity-100 group-hover:visible 
+                                 transition-all duration-200 delay-100 z-50 pointer-events-none origin-top">
+                    <div className="absolute bottom-full left-4 -mb-px border-8 border-transparent border-b-white/50 blur-[0.5px]"></div>
+                    <div className="leading-relaxed font-medium">
+                      {item.question}
+                    </div>
+                 </div>
                </div>
-             </div>
-          ))}
-        </div>
+            ))}
+          </div>
+
+{/* 👇👇👇 修改开始：增加 Raw Streams 显示 👇👇👇 */}
+          {indexInfo && indexInfo.total_indexes > 0 && (
+            // mt-16: 保持底部位置
+            <div className="mt-16 flex justify-center w-full animate-fade-in z-10 relative">
+              
+              <div className="flex items-center gap-2 px-3 py-1 rounded-full border border-white/30 bg-white/60 shadow-sm backdrop-blur-md transition-all hover:bg-white/80 select-none cursor-default">
+                
+                {/* 1. 状态 */}
+                <div className="flex items-center gap-1.5">
+                  <div className="flex h-3 w-3 items-center justify-center rounded-full bg-green-500 shadow-sm shrink-0">
+                    <svg className="h-2 w-2 text-white font-bold" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="3">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                    </svg>
+                  </div>
+                  <span className="text-xs font-bold text-slate-700 tracking-tight">Ready</span>
+                </div>
+
+                {/* 分割线 */}
+                <div className="h-2.5 w-px bg-slate-400/30"></div>
+
+                {/* 2. 日期范围 */}
+                <span className="text-[11px] text-slate-600 font-medium font-mono tracking-tight">
+                   {indexInfo.first_date} to {indexInfo.last_date}
+                </span>
+
+                {/* 分割线 */}
+                <div className="h-2.5 w-px bg-slate-400/30"></div>
+
+                {/* 3. 索引数量 (Items) */}
+                <span className="text-[11px] text-slate-600 font-medium">
+                  <span className="font-bold text-slate-800">{indexInfo.total_indexes}</span> Items
+                </span>
+
+                {/* 分割线 (新增) */}
+                <div className="h-2.5 w-px bg-slate-400/30"></div>
+
+                {/* 4. 原始流数据量 (Raw Streams) - 新增部分 */}
+                <span className="text-[11px] text-slate-600 font-medium">
+                  {/* 计算逻辑：天数 * 1440 (24小时*60分钟)，并用 toLocaleString() 加上千位分隔符 */}
+                  <span className="font-bold text-slate-800">
+                    {(indexInfo.total_indexes * 1440).toLocaleString()}
+                  </span> Raw Streams
+                </span>
+
+              </div>
+            </div>
+          )}
+          {/* 👆👆👆 修改结束 👆👆👆 */}
+        </>
       )}
     </div>
   );
