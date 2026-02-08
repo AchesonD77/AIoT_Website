@@ -237,8 +237,8 @@ const App: React.FC = () => {
               <div className="lg:col-span-8">
                 <LlmAnswer answer={queryState.data.llm_answer} />
                 <div className="mt-4 flex gap-4 text-xs text-slate-400 justify-end">
-                  <span>Processing time: {queryState.data.processing_time}s</span>
-                  <span>Model: GPT-5 (Simulated)</span>
+                  {/* <span>Processing time: {queryState.data.processing_time}s</span> */}
+                  <span>Model: OpenAI GPT-5.2 (Thinking)</span>
                 </div>
               </div>
             </div>
@@ -255,13 +255,15 @@ const App: React.FC = () => {
             Invisible <span className="mx-1.5 text-slate-400 font-normal">·</span> See Data Differently
           </div>
 
+
           <div className="text-xs leading-relaxed text-slate-500 font-medium">
-            Copyright &copy; 2025{' '}
+            Copyright &copy; 2025&ndash;{new Date().getFullYear()}
+            {' '}
             <a
               href="https://github.com/AchesonD77"
               target="_blank"
               rel="noopener noreferrer"
-              className="hover:text-polimi-700 transition-colors"
+              className="ml-2 hover:text-polimi-700 transition-colors"
             >
               Qixun Dan
             </a>
