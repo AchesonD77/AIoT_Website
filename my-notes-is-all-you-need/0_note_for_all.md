@@ -507,10 +507,4 @@ Potential future extensions:
 
 # Author
 
-Qixun Dan
-
-M.Sc. Telecommunication Engineering
-
-Politecnico di Milano
-
-IoTLab – AI and Data Analysis Research
+acheson dan
