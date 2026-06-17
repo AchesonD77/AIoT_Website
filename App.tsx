@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
-import html2canvas from 'html2canvas'; // ✅ 新增
-import jsPDF from 'jspdf'; // ✅ 新增
+import html2canvas from 'html2canvas'; // pdf截图依赖
+import jsPDF from 'jspdf'; // pdf生成依赖
+// 组件和服务导入
 import { Header } from './components/Header';
 import { QueryInput } from './components/QueryInput';
 import { ParsedTimeBadge } from './components/ParsedTimeBadge';
@@ -8,6 +9,7 @@ import { EvidenceTimeline } from './components/EvidenceTimeline';
 import { LlmAnswer } from './components/LlmAnswer';
 import { DebugPanel } from './components/DebugPanel';
 import { LoadingView } from './components/LoadingView';
+// API 服务导入
 import { fetchAnalysis } from './services/apiService';
 import { QueryState } from './types';
 
@@ -27,22 +29,27 @@ const App: React.FC = () => {
     data: null,
   });
 
+  // 用户的查询输入 (新增状态，用于在结果页面显示用户的提问，并且在 PDF 中也能体现)
   const [searchQuery, setSearchQuery] = useState('');
+  // 控制结果页面的关闭动画状态
   const [isClosing, setIsClosing] = useState(false);
   
-  // ✅ 新增: 截图生成 PDF 时的 loading 状态
+  // 截图生成 PDF 时的 loading 状态
   const [isCapturing, setIsCapturing] = useState(false);
-
+  // 结果内容的 Ref，用于 html2canvas 捕获  
   const resultsRef = useRef<HTMLDivElement>(null);
-
+  // 判断当前是否处于显示结果的布局状态
   const isResultsLayout = (!!queryState.data || queryState.isLoading) && !isClosing;
+  // 判断是否应该显示结果内容（有数据且不是正在加载）
   const showResultsContent = !!queryState.data && !queryState.isLoading;
 
+  // 随机选择一个背景图（只在初始渲染时执行一次）
   const [heroImage] = useState(() => {
     const randomIndex = Math.floor(Math.random() * BACKGROUND_IMAGES.length);
     return BACKGROUND_IMAGES[randomIndex];
   });
 
+  // 当进入结果布局时，自动滚动到顶部
   useEffect(() => {
     if (isResultsLayout) {
       window.scrollTo({
@@ -52,6 +59,7 @@ const App: React.FC = () => {
     }
   }, [isResultsLayout]);
 
+  // 处理用户查询的函数，负责调用后端 API 并更新状态
   const handleSearch = async (query: string) => {
     setQueryState((prev) => ({ ...prev, isLoading: true, error: null, data: null }));
     try {
@@ -70,6 +78,7 @@ const App: React.FC = () => {
     }
   };
 
+  // 处理重置查询的函数，触发关闭动画并在动画结束后清除数据
   const handleReset = () => {
     setSearchQuery('');
     setIsClosing(true);
@@ -80,7 +89,7 @@ const App: React.FC = () => {
     }, 800);
   };
 
-  // ✅ 新增: 处理 PDF 下载逻辑
+  // 处理 PDF 下载导出逻辑
   const handleDownloadPDF = async () => {
     if (!resultsRef.current) return;
     
@@ -88,7 +97,7 @@ const App: React.FC = () => {
 
     try {
       // 1. 使用 html2canvas 捕获 DOM
-      // useCORS: true 允许跨域加载图片 (虽然你的 Unsplash 图片可能需要后端代理，但一般配置了 CORS 即可)
+      // useCORS: true 允许跨域加载图片 (虽然 Unsplash 图片可能需要后端代理，但一般配置了 CORS 即可)
       // scale: 2 提高清晰度 (Retina 屏幕适配)
       const canvas = await html2canvas(resultsRef.current, {
         useCORS: true,
@@ -123,10 +132,12 @@ const App: React.FC = () => {
     }
   };
 
+  // 渲染组件
   return (
     <div className="min-h-screen flex flex-col bg-slate-50 text-slate-900 font-sans">
       <div className="relative z-[100]">
-        {/* ✅ 修改: 传递新增的 Props 给 Header */}
+        {/* 修改: 传递新增的 Props 给 Header */}  
+        {/* 传递 handleReset 和 handleDownloadPDF 函数，以及 canCapture 和 isCapturing 状态 */}
         <Header 
           onReset={handleReset} 
           onCapture={handleDownloadPDF}
@@ -178,6 +189,7 @@ const App: React.FC = () => {
                 </div>
               </div>
 
+              {/* 查询输入组件，新增了 isLoading 和 hasResults 两个 Props，用于控制输入框的状态和样式 */}
               <div className="w-full max-w-2xl transition-all duration-500 transform-gpu">
                 <QueryInput
                   value={searchQuery}
@@ -192,13 +204,14 @@ const App: React.FC = () => {
             </div>
           </div>
         </div>
-
+        
+        {/* 显示加载状态的占位内容 */}
         {queryState.isLoading && (
           <div className="flex-grow flex items-center justify-center min-h-[400px]">
             <LoadingView />
           </div>
         )}
-
+        {/* 显示结果内容的布局，包含用户的提问、时间戳、证据时间线和 LLM 回答 */}
         {(showResultsContent || isClosing) && queryState.data && (
           <div
             ref={resultsRef}
@@ -213,7 +226,7 @@ const App: React.FC = () => {
             
             <div className="pointer-events-none absolute -bottom-[30%] -left-[10%] w-[70%] h-[70%] rounded-full bg-gradient-to-tr from-violet-400/30 via-purple-300/20 to-indigo-200/10 blur-[120px] -z-10 animate-pulse-slow" style={{ animationDelay: '1.5s' }}></div>
 
-            {/* ✅ 新增部分 Start: 在 PDF 和结果卡片中显示用户的提问 */}
+            {/* 新增部分 Start: 在 PDF 和结果卡片中显示用户的提问 */}
             <div className="mb-8 border-b border-slate-200/60 pb-6 relative z-10">
               <h2 className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">
                 Analysis Query
@@ -222,18 +235,21 @@ const App: React.FC = () => {
                 “{searchQuery}”
               </p>
             </div>
-            {/* ✅ 新增部分 End */}
+            {/* 新增部分 End */}
 
+            {/* 显示时间戳的组件，传入 LLM 回答数据 显示时间解析结果*/}
             <div className="mb-8 relative z-10">
               <ParsedTimeBadge answer={queryState.data?.llm_answer} />
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start relative z-10">
-              {/* ... (后续内容保持不变) */}
+              {/*  */}
               <div className="lg:col-span-4 lg:sticky lg:top-24">
+                {/* 证据时间线组件，传入 LLM 回答数据 显示证据时间线 */}
                 <EvidenceTimeline answer={queryState.data?.llm_answer} />
               </div>
 
+                {/* LLM 回答组件，传入 LLM 回答数据 显示 LLM 回答内容 */}
               <div className="lg:col-span-8">
                 <LlmAnswer answer={queryState.data.llm_answer} />
                 <div className="mt-4 flex gap-4 text-xs text-slate-400 justify-end">
@@ -242,12 +258,12 @@ const App: React.FC = () => {
                 </div>
               </div>
             </div>
-
+            {/* 调试面板，传入查询数据 */}
             <DebugPanel data={queryState.data} />
           </div>
         )}
       </main>
-
+      {/* footer - 页脚部分，包含版权信息和外部链接,项目介绍 */}
       <footer className="bg-[#f5f5f7] border-t border-slate-200 py-7 font-sans">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 flex flex-col items-center text-center gap-3">
           <div className="text-sm text-polimi-900 font-bold tracking-wide">

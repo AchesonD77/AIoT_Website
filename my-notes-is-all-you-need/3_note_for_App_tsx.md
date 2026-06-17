@@ -173,7 +173,7 @@ State
 ## queryState
 
 ```tsx
-const [queryState, setQueryState]
+const [queryState, setQueryState] // 查询状态 ,设置查询状态
 ```
 
 保存：
