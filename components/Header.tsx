@@ -1,19 +1,29 @@
+// This component defines the Header of the application, which includes the logo, navigation icons, and interactive elements.
 import React from 'react';
+// Importing icons from lucide-react for use in the header
 import { Search, Download, Menu } from 'lucide-react';
 
+// Defining the props for the Header component, allowing for optional reset and capture functions, as well as state indicators for capturing capability and status.
 interface HeaderProps {
   onReset?: () => void;
   onCapture?: () => void;
   canCapture?: boolean;
   isCapturing?: boolean;
 }
-
+ 
+// The Header component is a functional React component that renders the header section of the application. It includes a logo that is clickable to reset the view, and navigation icons for search, download/capture, and menu actions. The download/capture button's appearance and functionality change based on the canCapture and isCapturing props.
 export const Header: React.FC<HeaderProps> = ({ 
   onReset, 
   onCapture, 
   canCapture = false,
   isCapturing = false
 }) => {
+  // The header is styled to be fixed at the top of the page with a 
+  // semi-transparent background and a blur effect. It contains a logo section 
+  // that is clickable to trigger the onReset function, and a navigation section with icons for search, download/capture, 
+  // and menu actions. The download/capture button is conditionally styled and 
+  // disabled based on the canCapture and isCapturing props.
+  // 返回 JSX 页面结构
   return (
     <header className="fixed w-full top-0 z-50 transition-all duration-300 bg-white/80 backdrop-blur-md border-b border-slate-200/50 shadow-sm">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -30,6 +40,7 @@ export const Header: React.FC<HeaderProps> = ({
               <span className="text-sm font-medium tracking-widest text-slate-600">MILANO 1863</span>
             </div>
             <div className="h-8 w-px bg-slate-300 mx-2 hidden sm:block"></div>
+            {/* IoTLab Logo and Description */}
             <div className="hidden sm:flex flex-col justify-center group-hover:opacity-80 transition-opacity">
                <span className="text-polimi-900 font-bold text-sm tracking-wide">IoTLab</span>
                <span className="text-xs text-slate-500">AI and Data Analysis</span>
@@ -40,12 +51,16 @@ export const Header: React.FC<HeaderProps> = ({
           {/* Nav Icons */}
           <div className="flex items-center gap-6 text-slate-600">
             <button className="hover:text-polimi-900 transition-colors p-2 rounded-full hover:bg-slate-100/50" title="Search History">
-                <Search className="w-5 h-5" />
+                <Search className="w-5 h-5" /> {/* Search Icon */}
             </button>
             
             {/* Download/Capture Button (Replaces Network) */}
              <button 
                 onClick={onCapture}
+                {/* The button is disabled if capturing is not allowed or
+                   if a capture is currently in progress. The button's appearance 
+                   changes based on the canCapture and isCapturing props, 
+                   providing visual feedback to the user. */}
                 disabled={!canCapture || isCapturing}
                 className={`
                     p-2 rounded-full transition-all duration-300
@@ -57,7 +72,7 @@ export const Header: React.FC<HeaderProps> = ({
                 `}
                 title={canCapture ? "Download Analysis Report (PDF)" : "No content to download"}
              >
-                <Download className="w-5 h-5" />
+                <Download className="w-5 h-5" /> {/* Download Icon */}
             </button>
 
             {/* Menu Button */}
