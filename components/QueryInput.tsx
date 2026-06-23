@@ -1,21 +1,29 @@
 import React, { useState, useEffect } from 'react';
 import { ArrowRight, Sparkles, X } from 'lucide-react';
-// 引入获取索引信息的函数和类型
+// 调用后端 API - 引入获取索引信息的函数和类型
 import { fetchIndexInfo, IndexInfo } from '../services/apiService';
 
+// 定义 QueryInput 组件的 props 接口
 interface QueryInputProps {
+  // 输入框的当前值
   value: string;
+  // 输入框值变化时的回调函数
   onChange: (value: string) => void;
+  // 提交搜索时的回调函数
   onSearch: (query: string) => void;
-  isLoading: boolean;
-  hideSuggestions?: boolean;
+  isLoading: boolean; // 是否正在加载搜索结果
+  hideSuggestions?: boolean; // 是否隐藏建议按钮
+  onReset?: () => void; // 可选的重置回调函数-恢复首页状态
+  hasResults?: boolean; // 是否有搜索结果
+}
   onReset?: () => void;
   hasResults?: boolean;
 }
 
+// 定义 Suggestion 接口，表示每个建议按钮的标签和对应的查询内容
 interface Suggestion {
-  label: string;
-  question: string;
+  label: string; // 显示在按钮上的标签
+  question: string; // 实际的查询内容，当点击按钮时会填充到输入框中
 }
 
 const SUGGESTIONS: Suggestion[] = [
@@ -102,14 +110,15 @@ export const QueryInput: React.FC<QueryInputProps> = ({
   onReset,
   hasResults = false
 }) => {
+  // 当前显示的推荐问题，随机从 SUGGESTIONS 中选择两个，控制 Sparkles 图标旋转，控制 Tooltip 显示
   const [randomSuggestions, setRandomSuggestions] = useState<Suggestion[]>([]);
   const [isSpinning, setIsSpinning] = useState(false);
   const [isHoveringButton, setIsHoveringButton] = useState(false);
 
-  // 👇 新增代码开始：定义索引信息状态
+  // 新增：定义索引信息状态
   const [indexInfo, setIndexInfo] = useState<IndexInfo | null>(null);
 
-  // 👇 新增代码开始：组件加载时获取后端索引信息
+  // 组件加载时获取后端索引信息，自动获取系统状态
   useEffect(() => {
     const loadIndexInfo = async () => {
       const data = await fetchIndexInfo();
@@ -117,15 +126,16 @@ export const QueryInput: React.FC<QueryInputProps> = ({
     };
     loadIndexInfo();
   }, []);
-  // 👆 新增代码结束
 
+  // 刷新建议按钮，随机选择两个建议问题，并设置旋转动画
   const refreshSuggestions = () => {
     setIsSpinning(true);
+    // 随机打乱 SUGGESTIONS 数组并选择前两个作为新的建议
     const shuffled = [...SUGGESTIONS].sort(() => 0.5 - Math.random());
     setRandomSuggestions(shuffled.slice(0, 2));
     setTimeout(() => setIsSpinning(false), 500);
   };
-
+  // 当 hideSuggestions 变为 false 时，刷新建议按钮
   useEffect(() => {
     if (!hideSuggestions) {
       refreshSuggestions();
